@@ -33,6 +33,11 @@
 #include <cstdio>
 #include <vector>
 #include <sstream>
+#include <unordered_map>
+#include <unordered_set>
+#include <algorithm>
+#include <queue>
+#include <stdlib.h>
 
 #include <sbpl/discrete_space_information/environment.h>
 #include <sbpl/utils/utils.h>
@@ -59,6 +64,27 @@
 class CMDPSTATE;
 class MDPConfig;
 class SBPL2DGridSearch;
+
+typedef std::pair<int,std::vector<int> > vertex_sig;
+typedef std::vector<std::pair<int,std::vector<int> > > vertex_sig_vec;
+
+// Hashing function for vertex signature pair 
+struct hash_vertex_sig {
+  std::size_t operator()(const std::pair<int,std::vector<int> >& key) const {
+    return 100000000*key.first + (key.second).size();
+  }
+};
+
+// key: (q,s), value: distance to (q,s)/g value
+static std::unordered_map<std::pair<int, std::vector<int> >, int, hash_vertex_sig> dist_;
+
+// For dijkstra's priority queue
+struct comparator {
+  bool operator()(const std::pair<int,std::vector<int> > v1,
+		  const std::pair<int,std::vector<int> > v2) const {
+    return(dist_[v1] > dist_[v2]);
+  }
+};
 
 struct EnvNAVXYTHETALATAction_t
 {
@@ -200,7 +226,7 @@ class EnvironmentNAVXYTHETALATTICE : public DiscreteSpaceInformation
 {
 public:
     EnvironmentNAVXYTHETALATTICE();
-
+      
     /**
      * \brief initialization of environment from file. See .cfg files for
      *        examples it also takes the perimeter of the robot with respect to some
@@ -456,7 +482,7 @@ public:
      * \brief prints environment variables for debugging
      */
     virtual void PrintVars() { }
-
+    
 protected:
     virtual int GetActionCost(int SourceX, int SourceY, int SourceTheta, EnvNAVXYTHETALATAction_t* action);
 
@@ -660,6 +686,59 @@ public:
 
     const EnvNAVXYTHETALATHashEntry_t* GetStateEntry(int state_id) const;
 
+    struct pair_hash {
+      std::size_t operator()(const std::pair<int,int> & v) const {
+        return v.first*1000000+v.second;
+      }
+    };
+
+    struct vector_hash {
+      std::size_t operator()(const std::vector<int>& v) const {
+        std::hash<int> hasher;
+        size_t seed = 0;
+        for (int i : v) {
+            seed ^= hasher(i) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+        }
+        return seed;
+      }
+    };
+    
+    // virtual void FindObsCells(std::unordered_set<std::pair<int,int>, pair_hash >& obs_cells);
+    virtual void CheckNeighbors(int x, 
+				int y,
+				int obs_num,
+				std::vector<std::vector<int> >& visited, 
+				std::vector<std::pair<int,int> >& n, 
+				std::unordered_map<std::pair<int,int>, int, pair_hash>& obs_map);
+    
+    virtual void CreateObsMap(std::unordered_map<std::pair<int,int>, int, pair_hash>& obs_map,
+			      int& obs_num);
+
+    virtual void FindCentroids(std::unordered_map<std::pair<int,int>, int, pair_hash> obs_map, 
+			       std::unordered_map<int, std::pair<int,int> >& centroids,
+			       int obs_num);
+
+    // Creates an unordered set of all of the suffixes for the user-defined signature set
+    virtual void Suffixes(std::vector<std::vector<int> > S,
+			  std::unordered_set<std::vector<int>, vector_hash>& suffixes);
+
+    virtual void CreateGoalSet(int end_id, 
+			       std::vector<std::vector<int> > S, 
+			       std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>* goals);
+
+    virtual std::vector<int> Signature(std::vector<int> u_sig,
+				       int v_id,
+				       std::vector<std::pair<int,int> > centroids);
+
+    virtual std::priority_queue<vertex_sig, vertex_sig_vec, comparator> PreComputeDijkstras
+      (std::priority_queue<vertex_sig, vertex_sig_vec, comparator> Q,
+       std::vector<std::pair<int,int> > centroids,
+       std::vector<std::vector<int> > S,
+       std::unordered_set<std::vector<int>, vector_hash> suffixes,
+       EnvironmentNAVXYTHETALAT env,
+       int start_id, 
+       int end_id);
+    
 protected:
     //hash table of size x_size*y_size. Maps from coords to stateId
     int HashTableSize;
