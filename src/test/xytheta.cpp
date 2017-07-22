@@ -120,8 +120,16 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
  
     // specify a start and goal state
     int start_id, goal_id;
-    setEnvStartGoal(env, .11, .11, 0, 35, 47.5, 0, start_id, goal_id);
- 
+    //setEnvStartGoal(env, .11, .11, 0, 35, 47.5, 0, start_id, goal_id);
+    setEnvStartGoal(env, 0.1, 0.125, 0, 0.325, 0.125, 0, start_id, goal_id);
+    //setEnvStartGoal(env, 0, 0, 0, 0.1, 0., 0, start_id, goal_id);
+    std::cout << start_id << " " << goal_id << std::endl;
+    int x, y, th;
+    env.GetCoordFromState(goal_id, x, y, th);
+    std::cout << "goal x:  " << x << " y: " << y << std::endl;
+    env.GetCoordFromState(start_id, x, y, th);
+    std::cout << "start x:  " << x << " y: " << y << std::endl;
+  
     // initialize a planner with start and goal state
     //SBPLPlanner* planner = NULL;
     //double initialEpsilon = 3.0;
@@ -147,24 +155,30 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     int obs_num = 0;
     env.CreateObsMap(obs_map, obs_num);
 
-    //for (auto& x: obs_map)
-    //  std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
+    for (auto& x: obs_map)
+     std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
 
     std::unordered_map<int, std::pair<int,int> > centroids;
     env.FindCentroids(obs_map, centroids, obs_num);
 
-    for (auto& x: centroids)
-      std::cout << x.first << ": (" << x.second.first << ", " << x.second.second << ")" << std::endl;
+    // for (auto& x: centroids)
+    //    std::cout << x.first << ": (" << x.second.first << ", " << x.second.second << ")" << std::endl;
 
-    std::vector<std::vector<int> > S = {{1,2},{1,2,3},{3,4},{1,3}};
+    std::vector<std::vector<int> > S = {{1,3},{3}};
     std::unordered_set<std::vector<int>, EnvironmentNAVXYTHETALAT::vector_hash> suffixes;
     env.Suffixes(S, suffixes);
     for (auto& x: suffixes) {
       for (int i = 0; i < x.size(); ++i) {
-	std::cout << x[i] << " ";
+    	std::cout << x[i] << " ";
       }
       std::cout << std::endl;
     }
+
+    //std::vector<int> beams(obs_num);
+    //std::iota(test.begin(), test.end(), 1);
+    
+    std::priority_queue<vertex_sig, vertex_sig_vec, comparator> Q;
+    env.HBSP(Q, true, centroids, S, suffixes, env, start_id, goal_id);
 }
  
  

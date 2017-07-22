@@ -259,7 +259,7 @@ void EnvironmentNAVXYTHETALATTICE::ReadConfiguration(FILE* fCfg)
             throw SBPL_Exception(ss.str());
         }
         else {
-            EnvNAVXYTHETALATCfg.NumThetaDirs = NAVXYTHETALAT_THETADIRS;
+	  EnvNAVXYTHETALATCfg.NumThetaDirs = 4;//NAVXYTHETALAT_THETADIRS;
         }
     }
     else {
@@ -2777,31 +2777,33 @@ void EnvironmentNAVXYTHETALAT::GetSuccs(
     SuccIDV->reserve(EnvNAVXYTHETALATCfg.actionwidth);
     CostV->reserve(EnvNAVXYTHETALATCfg.actionwidth);
     if (actionV != NULL) {
-        actionV->clear();
-        actionV->reserve(EnvNAVXYTHETALATCfg.actionwidth);
+      actionV->clear();
+      actionV->reserve(EnvNAVXYTHETALATCfg.actionwidth);
     }
 
     // goal state should be absorbing
-    if (SourceStateID == EnvNAVXYTHETALAT.goalstateid) return;
+    //if (SourceStateID == EnvNAVXYTHETALAT.goalstateid) return;
 
     // get X, Y for the state
     EnvNAVXYTHETALATHashEntry_t* HashEntry = StateID2CoordTable[SourceStateID];
 
     // iterate through actions
     for (aind = 0; aind < EnvNAVXYTHETALATCfg.actionwidth; aind++) {
-        EnvNAVXYTHETALATAction_t* nav3daction = &EnvNAVXYTHETALATCfg.ActionsV[(unsigned int)HashEntry->Theta][aind];
+      EnvNAVXYTHETALATAction_t* nav3daction = &EnvNAVXYTHETALATCfg.ActionsV[(unsigned int)HashEntry->Theta][aind];
         int newX = HashEntry->X + nav3daction->dX;
         int newY = HashEntry->Y + nav3daction->dY;
         int newTheta = normalizeDiscAngle(nav3daction->endtheta);
 
         // skip the invalid cells
         if (!IsValidCell(newX, newY)) {
+	  //std::cout << "(" << newX << ", " << newY << "): INVALID" << std::endl;
             continue;
         }
 
         // get cost
         int cost = GetActionCost(HashEntry->X, HashEntry->Y, HashEntry->Theta, nav3daction);
         if (cost >= INFINITECOST) {
+	  //std::cout << "(" << newX << ", " << newY << "): INFCOST" << std::endl;
             continue;
         }
 
@@ -3470,18 +3472,8 @@ void EnvironmentNAVXYTHETALAT::FindCentroids(std::unordered_map<std::pair<int,in
     for (auto& x: obs_map) {
       if (centroids.count(x.second) > 0)
 	continue;
-      else {
-	// for (auto& y: centroids) {
-      // 	  if (x.first.first == y.second.first){
-      // 	    diff_x = false;
-      // 	    break;
-      // 	  }
-      // 	}
-      // }
-      // if(diff_x) 
+      else { 
 	centroids.insert(std::make_pair(x.second,x.first));
-      // else
-      // 	diff_x = true;
       }
     }
   }
@@ -3496,95 +3488,126 @@ void EnvironmentNAVXYTHETALAT::Suffixes(std::vector<std::vector<int> > S,
       suffixes.insert(suf);
     }
   }
-  
 }
 
 void EnvironmentNAVXYTHETALAT::CreateGoalSet(int end_id, 
 					     std::vector<std::vector<int> > S, 
-					     std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>* goals) {
+					     std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals) {
   for(int i = 0; i < S.size(); ++i) {
-    goals->insert(std::make_pair(end_id, S[i]));
+    goals.insert(std::make_pair(end_id, S[i]));
   }
 }
 
-std::vector<int> EnvironmentNAVXYTHETALAT::Signature(std::vector<int> u_sig,
-						     int v_id,
-						     std::vector<std::pair<int,int> > centroids) {
-  std::vector<int> beams(u_sig.size()); // vector with size of u_sig ints.
+void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
+					 int v_id,
+					 EnvironmentNAVXYTHETALAT& env,
+					 std::unordered_map<int, std::pair<int,int> >& centroids,
+					 std::vector<int>& succ_sig) {
+
+  succ_sig.assign(u.second.begin(), u.second.end());
+  std::vector<int> beams(centroids.size());// vector with size of u_sig ints.
   std::iota(std::begin(beams), std::end(beams), 1); // Fill with 1, 2, ..., size of u_sig.
-
-  // create copy of u_sig that is sorted for set difference
-  std::vector<int> u_sig_sorted(u_sig);  
-  std::sort(u_sig_sorted.begin(), u_sig_sorted.end());
-
+  std::sort(u.second.begin(), u.second.end());
+  
   std::vector<int> difference;
   std::set_difference(beams.begin(), beams.end(),
-		      u_sig_sorted.begin(), u_sig_sorted.end(),
+		      u.second.begin(), u.second.end(),
 		      std::back_inserter(difference)
 		      );
-  int x, y, theta, beam;
-  GetCoordFromState(v_id, x, y, theta);
+  
+  int vx, vy, vtheta, ux, uy, utheta, beam;
+  env.GetCoordFromState(v_id, vx, vy, vtheta); 
+  env.GetCoordFromState(u.first, ux, uy, utheta);
+  std::cout << "(" << ux << ", " << uy << ") Successor: {(" << vx << ", " << vy << "), ";
 
   for(int i = 0; i < difference.size(); ++i) {
     beam = difference[i];
-    std::pair<int,int> beam_coor = centroids[beam - 1];
-    if(x > beam_coor.first && y > beam_coor.second) {
-      u_sig.push_back(beam);
+    std::pair<int,int> beam_coor = centroids.at(beam);
+    if(vx > beam_coor.first && vy < beam_coor.second &&
+       ux <= beam_coor.first) {
+      if(!succ_sig.empty() && succ_sig.back() == -beam){
+	std::cout << "ERASING" << std::endl;
+	succ_sig.erase(succ_sig.end());
+	//return;
+      }
+      succ_sig.push_back(beam);
+    } else if(vx < beam_coor.first && vy < beam_coor.second &&
+	      ux >= beam_coor.first) {
+      if(!succ_sig.empty() && succ_sig.back() == beam){
+	std::cout << "ERASING" << std::endl;
+	succ_sig.erase(succ_sig.end());
+	///return;
+      }
+      succ_sig.push_back(-beam);
     }
   }
-  return u_sig;
 }
 
-std::priority_queue<vertex_sig, vertex_sig_vec, comparator> EnvironmentNAVXYTHETALAT::PreComputeDijkstras(std::priority_queue<vertex_sig, vertex_sig_vec, comparator> Q,
-	   std::vector<std::pair<int,int> > centroids,
-           std::vector<std::vector<int> > S,	  
-           std::unordered_set<std::vector<int>, vector_hash> suffixes,
-	   EnvironmentNAVXYTHETALAT env,
+void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_vec, comparator>& Q,
+	   bool sig_restricted_succ,
+	   std::unordered_map<int, std::pair<int,int> >& centroids,
+           std::vector<std::vector<int> >& S,	  
+           std::unordered_set<std::vector<int>, vector_hash>& suffixes,
+	   EnvironmentNAVXYTHETALAT& env,
 	   int start_id, 
 	   int end_id){
   
   dist_ = {};
   std::vector<int> sig;
-  std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>* goals;
+  std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig> goals;
   if(Q.empty()) {
     std::pair<int, std::vector<int> > init_v = std::make_pair(start_id, sig);
     dist_.insert(std::make_pair(init_v, 0));
     Q.push(init_v);
     CreateGoalSet(end_id, S, goals);
-  } else {
-    goals->insert(std::make_pair(end_id, sig));
-  }
+  }// else {
+   // goals.insert(std::make_pair(end_id, sig));
+  //}
+  
   std::vector<int> succ_ids;
   std::vector<int> costs;
+  std::vector<int> succ_sig;
   while(!Q.empty()) {
     std::pair<int, std::vector<int> > u = Q.top();
     Q.pop();
-    
     succ_ids.clear();
     costs.clear();
     env.GetSuccs(u.first, &succ_ids, &costs);
     assert(succ_ids.size() == costs.size());
 
-    for (size_t sidx = 0; sidx < succ_ids.size(); ++sidx)  {
-      std::vector<int> succ_sig = Signature(u.second, succ_ids[sidx], centroids);
-      if(suffixes.count(succ_sig) == 0) { // If the current siguature not in set of suffixes
-	continue;
+    for (int sidx = 0; sidx < succ_ids.size(); ++sidx) {
+      Signature(u, succ_ids[sidx], env, centroids, succ_sig);
+      for (auto& x: succ_sig) {
+        std::cout << x << " ";
+      }
+      std::cout << "}" << std::endl;
+
+      // If the current siguature not in set of suffixes
+      if(sig_restricted_succ && !succ_sig.empty() &&
+	 suffixes.count(succ_sig) == 0) { 
+	succ_sig.clear();
+      	continue;
       }
 
       int alt = dist_[u] + costs[sidx];
       std::pair<int, std::vector<int>> curr_vertex = std::make_pair(succ_ids[sidx], succ_sig);
-      if(dist_.find(curr_vertex) == dist_.end()) { // Check if current vertex was explored, i.e. if dist is specified 
+      // Check if current vertex was explored, i.e. if dist is specified 
+      if(dist_.find(curr_vertex) == dist_.end() || alt < dist_[curr_vertex]) { 
 	dist_[curr_vertex] = alt;
     	Q.push(curr_vertex);
-      } else if(alt < dist_[curr_vertex]) {
-    	dist_[curr_vertex] = alt;
-    	Q.push(curr_vertex);
-	if (goals->count(curr_vertex) > 0) {
-	  goals->erase(curr_vertex);
-	  if (goals->empty())
-	    return Q;
-	}
+	if (sig_restricted_succ && goals.count(curr_vertex) > 0) {
+	  goals.erase(curr_vertex);
+	  if (goals.empty()) {
+	    std::cout << "AUGMENTED GRAPH COMPLETED" << std::endl;
+	    return;
+	  }
+	} else if (!sig_restricted_succ && curr_vertex.first == end_id) {
+	  return;
+	}    
       }
+      succ_sig.clear();
     }
+    //std::cout << "Q size: " << Q.size() << std::endl;
   }
+  std::cout << "NO SOLUTION FOUND" << std::endl;  
 }

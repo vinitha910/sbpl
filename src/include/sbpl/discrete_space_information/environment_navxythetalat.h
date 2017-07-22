@@ -724,18 +724,21 @@ public:
 
     virtual void CreateGoalSet(int end_id, 
 			       std::vector<std::vector<int> > S, 
-			       std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>* goals);
+			       std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals);
 
-    virtual std::vector<int> Signature(std::vector<int> u_sig,
-				       int v_id,
-				       std::vector<std::pair<int,int> > centroids);
+    virtual void Signature(std::pair<int, std::vector<int> > u,
+			   int v_id,
+			   EnvironmentNAVXYTHETALAT& env,
+			   std::unordered_map<int, std::pair<int,int> >& centroids,
+			   std::vector<int>& succ_sig);
 
-    virtual std::priority_queue<vertex_sig, vertex_sig_vec, comparator> PreComputeDijkstras
-      (std::priority_queue<vertex_sig, vertex_sig_vec, comparator> Q,
-       std::vector<std::pair<int,int> > centroids,
-       std::vector<std::vector<int> > S,
-       std::unordered_set<std::vector<int>, vector_hash> suffixes,
-       EnvironmentNAVXYTHETALAT env,
+    virtual void HBSP
+      (std::priority_queue<vertex_sig, vertex_sig_vec, comparator>& Q,
+       bool sig_restricted_succ,
+       std::unordered_map<int, std::pair<int,int> >& centroids,
+       std::vector<std::vector<int> >& S,
+       std::unordered_set<std::vector<int>, vector_hash>& suffixes,
+       EnvironmentNAVXYTHETALAT& env,
        int start_id, 
        int end_id);
     
