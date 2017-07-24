@@ -48,9 +48,13 @@ def get_map(filename):
 def plot_planned_path(filename, ax):
     f = open(filename, 'r')
     lines = f.readlines()
-    sol_values_lst = map(int, [p.strip().split() for p in lines])
-    print(sol_values_lst)
-    sol_values = np.fromiter(sol_values_lst, dtype=np.int)
+    #print([p.strip().split() for p in lines])
+    sol_values = []
+    for x in [p.strip().split() for p in lines]:
+        sol_values.append(list(map(int, x)))
+    sol_values = np.array(sol_values)
+    #print(sol_values_lst)
+    #sol_values = np.fromiter(sol_values_lst, dtype=np.int)
     print(sol_values)
     ax.plot(sol_values[:,0], sol_values[:,1], 'y-') 
  

@@ -688,7 +688,7 @@ public:
 
     struct pair_hash {
       std::size_t operator()(const std::pair<int,int> & v) const {
-        return v.first*1000000+v.second;
+        return v.first*10000000000000000+v.second;
       }
     };
 
@@ -734,6 +734,8 @@ public:
 
     virtual void HBSP
       (std::priority_queue<vertex_sig, vertex_sig_vec, comparator>& Q,
+       std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>& prev_,
+       std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,
        bool sig_restricted_succ,
        std::unordered_map<int, std::pair<int,int> >& centroids,
        std::vector<std::vector<int> >& S,
@@ -741,6 +743,11 @@ public:
        EnvironmentNAVXYTHETALAT& env,
        int start_id, 
        int end_id);
+
+    virtual void GetHBSPPaths
+      (std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,
+       std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>& prev_,
+       std::unordered_map<std::pair<int, std::vector<int> >, std::vector<std::pair<int, std::vector<int> > >, hash_vertex_sig>& paths_);
     
 protected:
     //hash table of size x_size*y_size. Maps from coords to stateId

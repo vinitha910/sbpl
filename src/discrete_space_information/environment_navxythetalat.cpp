@@ -2802,6 +2802,7 @@ void EnvironmentNAVXYTHETALAT::GetSuccs(
 
         // get cost
         int cost = GetActionCost(HashEntry->X, HashEntry->Y, HashEntry->Theta, nav3daction);
+	//int cost = EuclideanDistance_m(HashEntry->X, HashEntry->Y, newX, newY);
         if (cost >= INFINITECOST) {
 	  //std::cout << "(" << newX << ", " << newY << "): INFCOST" << std::endl;
             continue;
@@ -3523,19 +3524,19 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
   for(int i = 0; i < difference.size(); ++i) {
     beam = difference[i];
     std::pair<int,int> beam_coor = centroids.at(beam);
-    if(vx > beam_coor.first && vy < beam_coor.second &&
-       ux <= beam_coor.first) {
-      if(!succ_sig.empty() && succ_sig.back() == -beam){
-	std::cout << "ERASING" << std::endl;
-	succ_sig.erase(succ_sig.end());
+    if(vx >= beam_coor.first && vy < beam_coor.second &&
+       ux < beam_coor.first) {
+      if(!succ_sig.empty() && succ_sig.back() == -1 * beam){
+	std::cout << "ERASING -" << std::endl;
+	succ_sig.pop_back();
 	//return;
       }
       succ_sig.push_back(beam);
-    } else if(vx < beam_coor.first && vy < beam_coor.second &&
-	      ux >= beam_coor.first) {
+    } else if(vx <= beam_coor.first && vy < beam_coor.second &&
+	      ux > beam_coor.first) {
       if(!succ_sig.empty() && succ_sig.back() == beam){
 	std::cout << "ERASING" << std::endl;
-	succ_sig.erase(succ_sig.end());
+	succ_sig.pop_back();
 	///return;
       }
       succ_sig.push_back(-beam);
@@ -3544,6 +3545,8 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
 }
 
 void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_vec, comparator>& Q,
+	   std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>& prev_,
+	   std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,
 	   bool sig_restricted_succ,
 	   std::unordered_map<int, std::pair<int,int> >& centroids,
            std::vector<std::vector<int> >& S,	  
@@ -3554,12 +3557,12 @@ void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_v
   
   dist_ = {};
   std::vector<int> sig;
-  std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig> goals;
   if(Q.empty()) {
     std::pair<int, std::vector<int> > init_v = std::make_pair(start_id, sig);
     dist_.insert(std::make_pair(init_v, 0));
     Q.push(init_v);
     CreateGoalSet(end_id, S, goals);
+    std::cout << "Goals size: " << goals.size() << std::endl;
   }// else {
    // goals.insert(std::make_pair(end_id, sig));
   //}
@@ -3588,26 +3591,58 @@ void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_v
 	succ_sig.clear();
       	continue;
       }
-
+      //std::cout << "COST: " << costs[sidx] << std::endl;
       int alt = dist_[u] + costs[sidx];
       std::pair<int, std::vector<int>> curr_vertex = std::make_pair(succ_ids[sidx], succ_sig);
       // Check if current vertex was explored, i.e. if dist is specified 
-      if(dist_.find(curr_vertex) == dist_.end() || alt < dist_[curr_vertex]) { 
+      if(dist_.find(curr_vertex) == dist_.end() || alt < dist_[curr_vertex]) {
+	std::cout << "COST: " << alt << std::endl;
 	dist_[curr_vertex] = alt;
+	if(prev_.count(curr_vertex) > 0){
+	  prev_.at(curr_vertex) = u;
+	} else {
+	  prev_.insert(std::make_pair(curr_vertex,u));
+	}
     	Q.push(curr_vertex);
-	if (sig_restricted_succ && goals.count(curr_vertex) > 0) {
-	  goals.erase(curr_vertex);
-	  if (goals.empty()) {
-	    std::cout << "AUGMENTED GRAPH COMPLETED" << std::endl;
-	    return;
-	  }
-	} else if (!sig_restricted_succ && curr_vertex.first == end_id) {
-	  return;
-	}    
+	// if (sig_restricted_succ && goals.count(curr_vertex) > 0) {
+	//   goals.erase(curr_vertex);
+	//   if (goals.empty()) {
+	//     std::cout << "AUGMENTED GRAPH COMPLETED" << std::endl;
+	//     std::cout << "Q size: " << Q.size() << std::endl;
+	//     return;
+	//   }
+	// } else if (!sig_restricted_succ && curr_vertex.first == end_id) {
+	//   return;
+	// }
+	
       }
       succ_sig.clear();
     }
     //std::cout << "Q size: " << Q.size() << std::endl;
   }
-  std::cout << "NO SOLUTION FOUND" << std::endl;  
+  std::cout << "AUGMENTED GRAPH COMPLETED" << std::endl;  
+}
+
+void EnvironmentNAVXYTHETALAT::GetHBSPPaths(
+  std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,
+  std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>& prev_,
+  std::unordered_map<std::pair<int, std::vector<int> >, std::vector<std::pair<int, std::vector<int> > >, hash_vertex_sig>& paths_) {
+
+  std::vector<std::pair<int, std::vector<int> > > path;
+  std::pair<int, std::vector<int> > u;
+  bool prev_exists = true;
+  for (auto& g: goals) {
+    u = g;
+    while(prev_exists) {
+      path.push_back(u);
+      if(prev_.count(u) > 0) 
+	u = prev_.at(u);
+      else
+	prev_exists = false;
+    }
+    paths_.insert(std::make_pair(g, path));
+    std::cout << path.size() << std::endl;
+    path.clear();
+    prev_exists = true;
+  }
 }
