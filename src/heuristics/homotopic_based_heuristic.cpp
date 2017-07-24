@@ -34,7 +34,7 @@ HomotopicBasedHeuristic::HomotopicBasedHeuristic(DiscreteSpaceInformation* envir
 {
 }
 
-int HomotopicBasedHeuristic::GetGoalHeuristic(int state_id)
+int HomotopicBasedHeuristic::GetGoalHeuristic(int state_id, int goal_id)
 {
     return m_environment->GetGoalHeuristic(state_id);
 }

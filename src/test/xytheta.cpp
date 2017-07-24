@@ -122,7 +122,8 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     int start_id, goal_id;
     //setEnvStartGoal(env, .11, .11, 0, 35, 47.5, 0, start_id, goal_id);
     //setEnvStartGoal(env, 0.1, 0.125, 0, 0.325, 0.125, 0, start_id, goal_id);
-    setEnvStartGoal(env, 0.325, 0.125, 0, 0, 0, 0, start_id, goal_id);
+    //setEnvStartGoal(env, 0.325, 0.125, 0, 0.025, 0, 0, start_id, goal_id);
+    setEnvStartGoal(env, 0.425, 0.275, 0, 0.025, 0.025, 0, start_id, goal_id);
     //setEnvStartGoal(env, .15, .15, 0, 0, 0., 0, start_id, goal_id);
     std::cout << start_id << " " << goal_id << std::endl;
     int x, y, th;
@@ -156,8 +157,8 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     int obs_num = 0;
     env.CreateObsMap(obs_map, obs_num);
 
-    // for (auto& x: obs_map)
-    //  std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
+    for (auto& x: obs_map)
+     std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
 
     std::unordered_map<int, std::pair<int,int> > centroids;
     env.FindCentroids(obs_map, centroids, obs_num);
@@ -166,7 +167,8 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
        std::cout << x.first << ": (" << x.second.first << ", " << x.second.second << ")" << std::endl;
 
     //std::vector<std::vector<int> > S = {{1,3},{3}};
-    std::vector<std::vector<int> > S = {{-3},{-3,-1}};
+    //std::vector<std::vector<int> > S = {{-3,-1}};
+    std::vector<std::vector<int> > S = {{-2}};//{-6,-4,-5,-1,-3,-2},{-5,-1,-2}
     //std::vector<std::vector<int> > S = {{-2,-1}};
     std::unordered_set<std::vector<int>, EnvironmentNAVXYTHETALAT::vector_hash> suffixes;
     env.Suffixes(S, suffixes);
@@ -203,8 +205,8 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
       }
       std::cout << std::endl;
     }
-    std::string filename("backwards_dijkstras.txt");
-    writeSolution(env, solution_stateIDs, filename.c_str());
+    //std::string filename("env_simple.txt");
+    //writeSolution(env, solution_stateIDs, filename.c_str());
 }
  
  

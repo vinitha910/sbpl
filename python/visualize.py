@@ -45,7 +45,7 @@ def get_map(filename):
     return (map_values, cell_size)
  
  
-def plot_planned_path(filename, ax):
+def plot_planned_path(filename, ax, color):
     f = open(filename, 'r')
     lines = f.readlines()
     #print([p.strip().split() for p in lines])
@@ -56,7 +56,7 @@ def plot_planned_path(filename, ax):
     #print(sol_values_lst)
     #sol_values = np.fromiter(sol_values_lst, dtype=np.int)
     print(sol_values)
-    ax.plot(sol_values[:,0], sol_values[:,1], 'y-') 
+    ax.plot(sol_values[:,0], sol_values[:,1], color) 
  
 def plot_cont_planned_path(filename, cell_size, ax):
     f = open(filename, 'r')
@@ -67,11 +67,14 @@ def plot_cont_planned_path(filename, cell_size, ax):
  
 if __name__ == '__main__':
     (map_values, cell_size) = get_map(sys.argv[1])
-    fig = plt.figure()
+    fig = plt.figure(figsize=(30,30), dpi=100)
     ax = fig.add_subplot(111)
-    plt.imshow(map_values, vmin=0, vmax=1)
+    plt.imshow(map_values, vmin=0, vmax=1, cmap='jet', origin='lower')
     plt.ylim([0, map_values.shape[0]])
     plt.xlim([0, map_values.shape[1]])
  
-    plot_planned_path(sys.argv[2], ax)
+    plot_planned_path(sys.argv[2], ax, 'y')
+    plot_planned_path(sys.argv[3], ax, 'w')
+    #plot_planned_path(sys.argv[4], ax, 'g')
+    plt.gca().invert_yaxis()
     plt.show()
