@@ -33,6 +33,7 @@
 #include <cstddef>
 #include <vector>
 #include <sbpl/config.h>
+#include <unordered_map>
 
 #define 	GETSTATEIND(stateid, mapid) StateID2IndexMapping[mapid][stateid]
 
@@ -340,11 +341,13 @@ public:
      *        In ARA* / AD*: (cost(initialsolution) <= eps*cost(optimalsolution))
      */
     virtual void set_initialsolution_eps(double initialsolution_eps) { }
-
+    
     virtual ~SBPLPlanner() { }
 
 protected:
     DiscreteSpaceInformation *environment_;
+    std::vector< std::vector<int > > S_;
+      std::unordered_map<int, std::pair<int,int> > centroids_;
 };
 
 #endif

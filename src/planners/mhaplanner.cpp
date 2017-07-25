@@ -28,6 +28,7 @@
  */
 
 #include <sbpl/planners/mhaplanner.h>
+#include <sbpl/discrete_space_information/environment_navxythetalat.h>
 
 #include <assert.h>
 #include <stdlib.h>
@@ -43,8 +44,10 @@ static double GetTime()
 
 MHAPlanner::MHAPlanner(
     DiscreteSpaceInformation* environment,
-    Heuristic* hanchor,
-    Heuristic** heurs,
+    std::vector< std::vector<int > > S,
+    std::unordered_map<int, std::pair<int,int> > centroids,
+    HomotopicBasedHeuristic* hanchor,
+    HomotopicBasedHeuristic** heurs,
     int hcount)
 :
     SBPLPlanner(),
@@ -67,7 +70,9 @@ MHAPlanner::MHAPlanner(
     m_open(NULL)
 {
     environment_ = environment;
-
+    S_ = S;
+    centroids_ = centroids;
+    
     m_open = new CHeap[hcount + 1];
 
     // Overwrite default members for ReplanParams to represent a single optimal
@@ -182,8 +187,9 @@ int MHAPlanner::replan(
     start_time = GetTime();
 
     ++m_call_number;
-    reinit_state(m_goal_state);
-    reinit_state(m_start_state);
+    std::vector<int> sig;
+    reinit_state(m_goal_state,sig);
+    reinit_state(m_start_state,sig);
     m_start_state->g = 0;
 
     // insert start state into all heaps with key(start, i) as priority
@@ -437,7 +443,8 @@ MHASearchState* MHAPlanner::get_state(int state_id)
         MHASearchState* s = (MHASearchState*)malloc(state_size);
 
         const size_t mha_state_idx = m_search_states.size();
-        init_state(s, mha_state_idx, state_id);
+	std::vector<int> sig;
+        init_state(s, mha_state_idx, state_id, sig);
 
         // map graph state to search state
         idxs[MHAMDP_STATEID2IND] = mha_state_idx;
@@ -477,22 +484,24 @@ void MHAPlanner::clear()
 void MHAPlanner::init_state(
     MHASearchState* state,
     size_t mha_state_idx,
-    int state_id)
+    int state_id,
+    std::vector<int> sig)
 {
     state->call_number = 0; // not initialized for any iteration
     state->state_id = state_id;
     state->closed_in_anc = false;
     state->closed_in_add = false;
+    state->sig = sig;
     for (int i = 0; i < num_heuristics(); ++i) {
         state->od[i].open_state.heapindex = 0;
-        state->od[i].h = compute_heuristic(state->state_id, i);
+        state->od[i].h = compute_heuristic(state->state_id, i, state->sig);
         // hijack list element pointers to map back to mha search state
         assert(sizeof(state->od[i].open_state.listelem) >= sizeof(struct listelement*));
         reinterpret_cast<size_t&>(state->od[i].open_state.listelem[0]) = mha_state_idx;
     }
 }
 
-void MHAPlanner::reinit_state(MHASearchState* state)
+void MHAPlanner::reinit_state(MHASearchState* state, std::vector<int> sig)
 {
     if (state->call_number != m_call_number) {
         state->call_number = m_call_number;
@@ -502,9 +511,10 @@ void MHAPlanner::reinit_state(MHASearchState* state)
         state->closed_in_anc = false;
         state->closed_in_add = false;
 
+	state->sig = sig;
         for (int i = 0; i < num_heuristics(); ++i) {
             state->od[i].open_state.heapindex = 0;
-            state->od[i].h = compute_heuristic(state->state_id, i);
+            state->od[i].h = compute_heuristic(state->state_id, i, state->sig);
         }
     }
 }
@@ -549,13 +559,23 @@ void MHAPlanner::expand(MHASearchState* state, int hidx)
 
     std::vector<int> succ_ids;
     std::vector<int> costs;
+    std::vector<int> succ_sig;
+    std::pair<int, std::vector<int> > u;
     environment_->GetSuccs(state->state_id, &succ_ids, &costs);
     assert(succ_ids.size() == costs.size());
 
     for (size_t sidx = 0; sidx < succ_ids.size(); ++sidx)  {
         const int cost = costs[sidx];
-        MHASearchState* succ_state = get_state(succ_ids[sidx]);
-        reinit_state(succ_state);
+	u = std::make_pair(state->state_id, state->sig);
+	EnvironmentNAVXYTHETALAT* env_ptr = dynamic_cast<EnvironmentNAVXYTHETALAT*>(environment_);
+	if(env_ptr){
+	  env_ptr->Signature(u, succ_ids[sidx], *env_ptr, centroids_, succ_sig);
+	} else {
+	  SBPL_ERROR("Can ony be used with EnvironmentNAVXYTHETALAT");
+	}
+	
+	MHASearchState* succ_state = get_state(succ_ids[sidx]);
+        reinit_state(succ_state, succ_sig);
 
         SBPL_DEBUG(" Successor %d", succ_state->state_id);
 
@@ -594,13 +614,13 @@ MHASearchState* MHAPlanner::state_from_open_state(
     return m_search_states[ssidx];
 }
 
-int MHAPlanner::compute_heuristic(int state_id, int hidx)
+int MHAPlanner::compute_heuristic(int state_id, int hidx, std::vector<int> sig)
 {
     if (hidx == 0) {
-        return m_hanchor->GetGoalHeuristic(state_id);
+      return m_hanchor->GetGoalHeuristic(state_id, sig);
     }
     else {
-        return m_heurs[hidx - 1]->GetGoalHeuristic(state_id);
+      return m_heurs[hidx - 1]->GetGoalHeuristic(state_id, sig);
     }
 }
 
@@ -653,3 +673,5 @@ bool MHAPlanner::closed_in_any_search(MHASearchState* state) const
 {
     return state->closed_in_anc || state->closed_in_add;
 }
+
+

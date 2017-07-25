@@ -31,8 +31,10 @@
 #define sbpl_MHAPlanner_h
 
 #include <sbpl/heuristics/heuristic.h>
+#include <sbpl/heuristics/homotopic_based_heuristic.h>
 #include <sbpl/planners/planner.h>
 #include <sbpl/utils/heap.h>
+#include <unordered_map>
 
 struct MHASearchState
 {
@@ -44,6 +46,9 @@ struct MHASearchState
     bool closed_in_anc;
     bool closed_in_add;
 
+    std::vector< int> sig;
+
+    
     struct HeapData
     {
         AbstractSearchState open_state;
@@ -59,8 +64,10 @@ public:
 
     MHAPlanner(
             DiscreteSpaceInformation* environment,
-            Heuristic* hanchor,
-            Heuristic** heurs,
+	    std::vector< std::vector<int > > S,
+	    std::unordered_map<int, std::pair<int,int> > centroids,
+            HomotopicBasedHeuristic* hanchor,
+            HomotopicBasedHeuristic** heurs,
             int hcount);
 
     virtual ~MHAPlanner();
@@ -160,8 +167,8 @@ public:
 private:
 
     // Related objects
-    Heuristic* m_hanchor;
-    Heuristic** m_heurs;
+    HomotopicBasedHeuristic* m_hanchor;
+    HomotopicBasedHeuristic** m_heurs;
     int m_hcount;           ///< number of additional heuristics used
 
     ReplanParams m_params;
@@ -192,20 +199,20 @@ private:
 
     int num_heuristics() const { return m_hcount + 1; }
     MHASearchState* get_state(int state_id);
-    void init_state(MHASearchState* state, size_t mha_state_idx, int state_id);
-    void reinit_state(MHASearchState* state);
+    void init_state(MHASearchState* state, size_t mha_state_idx, int state_id, std::vector<int> sig);
+    void reinit_state(MHASearchState* state, std::vector<int> sig);
     void reinit_search();
     void clear_open_lists();
     void clear();
     int compute_key(MHASearchState* state, int hidx);
     void expand(MHASearchState* state, int hidx);
     MHASearchState* state_from_open_state(AbstractSearchState* open_state);
-    int compute_heuristic(int state_id, int hidx);
+    int compute_heuristic(int state_id, int hidx, std::vector<int> sig);
     int get_minf(CHeap& pq) const;
     void insert_or_update(MHASearchState* state, int hidx, int f);
 
     void extract_path(std::vector<int>* solution_path, int* solcost);
-
+    
     bool closed_in_anc_search(MHASearchState* state) const;
     bool closed_in_add_search(MHASearchState* state) const;
     bool closed_in_any_search(MHASearchState* state) const;

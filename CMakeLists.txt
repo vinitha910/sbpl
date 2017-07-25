@@ -20,6 +20,7 @@ add_library(sbpl SHARED
   src/discrete_space_information/environment_XXX.cpp
   src/discrete_space_information/environment_robarm.cpp
   src/heuristics/embedded_heuristic.cpp
+  src/heuristics/homotopic_based_heuristic.cpp
   src/planners/adplanner.cpp
   src/planners/ANAplanner.cpp
   src/planners/araplanner.cpp

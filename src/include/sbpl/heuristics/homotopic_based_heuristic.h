@@ -38,7 +38,9 @@ public:
 
     HomotopicBasedHeuristic(DiscreteSpaceInformation* environment);
 
-    int GetGoalHeuristic(int state_id);
+    int GetGoalHeuristic(int state_id) { return -1; }
+    
+    int GetGoalHeuristic(int& state_id, std::vector<int>& sig);
     //int GetStartHeuristic(int state_id);
     //int GetFromToHeuristic(int from_id, int to_id);
 };

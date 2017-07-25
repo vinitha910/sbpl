@@ -104,6 +104,7 @@ public:
      */
     virtual void GetSuccs(int SourceStateID, std::vector<int>* SuccIDV, std::vector<int>* CostV) = 0;
 
+    
     /**
      * \brief This version is used with lazy planners. The environment must tell which successors have
      *        been evaluated fully (and therefore their true cost is being returned) or if it has not been.
