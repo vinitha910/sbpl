@@ -748,6 +748,8 @@ public:
       (std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,
        std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>& prev_,
        std::unordered_map<std::pair<int, std::vector<int> >, std::vector<std::pair<int, std::vector<int> > >, hash_vertex_sig>& paths_);
+
+    virtual int GetHBSPCost(std::pair<int, std::vector<int> > v);
     
 protected:
     //hash table of size x_size*y_size. Maps from coords to stateId

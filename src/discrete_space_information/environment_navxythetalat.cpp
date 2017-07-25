@@ -3646,3 +3646,10 @@ void EnvironmentNAVXYTHETALAT::GetHBSPPaths(
     prev_exists = true;
   }
 }
+
+int EnvironmentNAVXYTHETALAT::GetHBSPCost(std::pair<int, std::vector<int> > v){
+  if(dist_.count(v) > 0)
+    return dist_.at(v);
+  
+  return -1;
+}

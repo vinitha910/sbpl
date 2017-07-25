@@ -28,15 +28,22 @@
  */
  
 #include <sbpl/heuristics/homotopic_based_heuristic.h>
+#include <sbpl/discrete_space_information/environment_navxythetalat.h>
 
 HomotopicBasedHeuristic::HomotopicBasedHeuristic(DiscreteSpaceInformation* environment) :
     Heuristic(environment)
 {
 }
 
-int HomotopicBasedHeuristic::GetGoalHeuristic(int& state_id, std::vector<int>& sig)
+int HomotopicBasedHeuristic::GetGoalHeuristic(int& hidx, int& state_id, std::vector<int>& sig)
 {
-    return m_environment->GetGoalHeuristic(state_id);
+  EnvironmentNAVXYTHETALAT* env_ptr = dynamic_cast<EnvironmentNAVXYTHETALAT*>(m_environment);
+  if(env_ptr){
+    std::pair<int, std::vector<int> > v = make_pair(state_id, sig);
+    return env_ptr->GetHBSPCost(v);
+  } else {
+    SBPL_ERROR("Heuristic Function can only be used with EnvironmentNAVXYTHETALAT");
+  }
 }
 
 // int HomotopicBasedHeuristic::GetStartHeuristic(int state_id)

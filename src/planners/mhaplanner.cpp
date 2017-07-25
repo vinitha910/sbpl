@@ -617,10 +617,11 @@ MHASearchState* MHAPlanner::state_from_open_state(
 int MHAPlanner::compute_heuristic(int state_id, int hidx, std::vector<int> sig)
 {
     if (hidx == 0) {
-      return m_hanchor->GetGoalHeuristic(state_id, sig);
+      return m_hanchor->GetGoalHeuristic(hidx, state_id, sig);
     }
     else {
-      return m_heurs[hidx - 1]->GetGoalHeuristic(state_id, sig);
+      int hindx = hidx - 1;
+      return m_heurs[hidx - 1]->GetGoalHeuristic(hindx, state_id, sig);
     }
 }
 
