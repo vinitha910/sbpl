@@ -74,7 +74,7 @@ if __name__ == '__main__':
     plt.xlim([0, map_values.shape[1]])
  
     plot_planned_path(sys.argv[2], ax, 'y')
-    plot_planned_path(sys.argv[3], ax, 'w')
+    #plot_planned_path(sys.argv[3], ax, 'w')
     #plot_planned_path(sys.argv[4], ax, 'g')
     plt.gca().invert_yaxis()
     plt.show()

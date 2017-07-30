@@ -31,6 +31,7 @@
 #define sbpl_Heuristic_h
 
 #include <sbpl/discrete_space_information/environment.h>
+#include <sbpl/discrete_space_information/environment_navxythetalat.h>
 
 class Heuristic
 {
@@ -49,6 +50,8 @@ public:
 protected:
 
     DiscreteSpaceInformation* m_environment;
+    std::vector<std::vector<int> >* S_;
+    EnvironmentNAVXYTHETALAT* env_;
 };
 
 #endif

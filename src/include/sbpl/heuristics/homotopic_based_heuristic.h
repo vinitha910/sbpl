@@ -31,18 +31,30 @@
 #define sbpl_HomotopicBasedHeuristic_h
 
 #include <sbpl/heuristics/heuristic.h>
+#include <sbpl/discrete_space_information/environment_navxythetalat.h>
+#include <memory>
 
-class HomotopicBasedHeuristic : public Heuristic
+class HomotopicBasedHeuristic 
 {
 public:
 
-    HomotopicBasedHeuristic(DiscreteSpaceInformation* environment);
+  HomotopicBasedHeuristic(EnvironmentNAVXYTHETALAT* environment, std::vector<std::vector<int> >* S);
 
+  //~HomotopicBasedHeuristic() { }
+   
     int GetGoalHeuristic(int state_id) { return -1; }
     
     int GetGoalHeuristic(int& hidx, int& state_id, std::vector<int>& sig);
-    //int GetStartHeuristic(int state_id);
-    //int GetFromToHeuristic(int from_id, int to_id);
+
+    int GetStartHeuristic(int state_id) { return -1; }
+
+    int GetFromToHeuristic(int from_id, int to_id) { return -1; }
+    
+protected:
+    
+    std::vector<std::vector<int> >* S_;
+    EnvironmentNAVXYTHETALAT* env_;
+
 };
 
 #endif

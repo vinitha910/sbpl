@@ -52,6 +52,7 @@
 #include <sbpl/discrete_space_information/environment_XXX.h>
 #include <sbpl/heuristics/heuristic.h>
 #include <sbpl/heuristics/embedded_heuristic.h>
+#include <sbpl/heuristics/homotopic_based_heuristic.h>
 #include <sbpl/planners/adplanner.h>
 #include <sbpl/planners/ANAplanner.h>
 #include <sbpl/planners/araplanner.h>

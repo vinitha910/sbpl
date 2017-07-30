@@ -5,7 +5,7 @@
 using namespace std;
  
 #include <sbpl/headers.h>
- 
+
 // creating the footprint
 void createFootprint(vector<sbpl_2Dpt_t>& perimeter){
     sbpl_2Dpt_t pt_m;
@@ -28,6 +28,8 @@ void createFootprint(vector<sbpl_2Dpt_t>& perimeter){
 void initializeEnv(EnvironmentNAVXYTHETALAT& env, 
                    vector<sbpl_2Dpt_t>& perimeter, 
                    char* envCfgFilename, char* motPrimFilename){
+  std::cout << motPrimFilename << std::endl;
+  std::cout << envCfgFilename << std::endl;
     if (!env.InitializeEnv(envCfgFilename, perimeter, motPrimFilename)) {
         printf("ERROR: InitializeEnv failed\n");
         throw SBPL_Exception();
@@ -45,24 +47,30 @@ void setEnvStartGoal(EnvironmentNAVXYTHETALAT& env,
  
 void initializePlanner(SBPLPlanner*& planner, 
                        EnvironmentNAVXYTHETALAT& env,
+		       std::vector< std::vector<int > >& S,
+		       std::unordered_map<int, std::pair<int,int> >& centroids,
                        int start_id, int goal_id,
-                       double initialEpsilon, 
-                       bool bsearchuntilfirstsolution){
-    // work this out later, what is bforwardsearch?
-    bool bsearch = false;
-    planner = new ARAPlanner(&env, bsearch);
- 
+                       double initialEpsilon,
+		       bool bsearchuntilfirstsolution,
+		       HomotopicBasedHeuristic hanchor,
+		       HomotopicBasedHeuristic** heurs,
+		       int hcount){
+  std::cout<< "initing" << std::endl;
+  planner = new MHAPlanner(&env, S, centroids, &hanchor, heurs, hcount);
+  std::cout<< "initialized" << std::endl;
+    if (planner->set_goal(goal_id) == 0) {
+        printf("ERROR: failed to set goal state\n");
+	throw new SBPL_Exception();
+    }
     // set planner properties
     if (planner->set_start(start_id) == 0) {
         printf("ERROR: failed to set start state\n");
         throw new SBPL_Exception();
     }
-    if (planner->set_goal(goal_id) == 0) {
-        printf("ERROR: failed to set goal state\n");
-        throw new SBPL_Exception();
-    }
+    
     planner->set_initialsolution_eps(initialEpsilon);
     planner->set_search_mode(bsearchuntilfirstsolution);
+    
 }
  
 int runPlanner(SBPLPlanner* planner, int allocated_time_secs, 
@@ -123,90 +131,103 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     //setEnvStartGoal(env, .11, .11, 0, 35, 47.5, 0, start_id, goal_id);
     //setEnvStartGoal(env, 0.1, 0.125, 0, 0.325, 0.125, 0, start_id, goal_id);
     //setEnvStartGoal(env, 0.325, 0.125, 0, 0.025, 0, 0, start_id, goal_id);
-    setEnvStartGoal(env, 0.425, 0.275, 0, 0.025, 0.025, 0, start_id, goal_id);
-    //setEnvStartGoal(env, .15, .15, 0, 0, 0., 0, start_id, goal_id);
-    std::cout << start_id << " " << goal_id << std::endl;
+    setEnvStartGoal(env, 0.4, 0.3, 0, 0.025, 0.025, 0, start_id, goal_id);
+    // setEnvStartGoal(env, .15, .15, 0, 0, 0., 0, start_id, goal_id);
+    // std::cout << start_id << " " << goal_id << std::endl;
     int x, y, th;
-    env.GetCoordFromState(goal_id, x, y, th);
-    std::cout << "goal x:  " << x << " y: " << y << std::endl;
-    env.GetCoordFromState(start_id, x, y, th);
-    std::cout << "start x:  " << x << " y: " << y << std::endl;
-  
-    // initialize a planner with start and goal state
-    //SBPLPlanner* planner = NULL;
-    //double initialEpsilon = 3.0;
-    //bool bsearchuntilfirstsolution = false;
-    //initializePlanner(planner, env, start_id, goal_id, initialEpsilon, 
-    //                  bsearchuntilfirstsolution);
- 
-    // plan
-    //vector<int> solution_stateIDs;
-    //double allocated_time_secs = 10.0; // in seconds
-    //runPlanner(planner, allocated_time_secs, solution_stateIDs);
- 
-    // print stats
-    //env.PrintTimeStat(stdout);
- 
-    // write out solutions
-    //std::string filename("sol.txt");
-    //writeSolution(env, solution_stateIDs, filename.c_str());
- 
-    //delete planner;
+    // env.GetCoordFromState(goal_id, x, y, th);
+    // std::cout << "goal x:  " << x << " y: " << y << std::endl;
+    // env.GetCoordFromState(start_id, x, y, th);
+    // std::cout << "start x:  " << x << " y: " << y << std::endl;
 
     std::unordered_map<std::pair<int,int>, int, EnvironmentNAVXYTHETALAT::pair_hash > obs_map;
     int obs_num = 0;
     env.CreateObsMap(obs_map, obs_num);
 
-    for (auto& x: obs_map)
-     std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
+    // for (auto& x: obs_map)
+    //  std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
 
     std::unordered_map<int, std::pair<int,int> > centroids;
     env.FindCentroids(obs_map, centroids, obs_num);
 
-    for (auto& x: centroids)
-       std::cout << x.first << ": (" << x.second.first << ", " << x.second.second << ")" << std::endl;
+    // for (auto& x: centroids)
+    //    std::cout << x.first << ": (" << x.second.first << ", " << x.second.second << ")" << std::endl;
 
     //std::vector<std::vector<int> > S = {{1,3},{3}};
     //std::vector<std::vector<int> > S = {{-3,-1}};
-    std::vector<std::vector<int> > S = {{-2}};//{-6,-4,-5,-1,-3,-2},{-5,-1,-2}
+    std::vector<std::vector<int> > S = {{-2},{-6,-4,-5,-1,-3,-2},{-5,-1,-2}};
     //std::vector<std::vector<int> > S = {{-2,-1}};
     std::unordered_set<std::vector<int>, EnvironmentNAVXYTHETALAT::vector_hash> suffixes;
     env.Suffixes(S, suffixes);
-    for (auto& x: suffixes) {
-      for (int i = 0; i < x.size(); ++i) {
-    	std::cout << x[i] << " ";
-      }
-      std::cout << std::endl;
-    }
+    // for (auto& x: suffixes) {
+    //   for (int i = 0; i < x.size(); ++i) {
+    // 	std::cout << x[i] << " ";
+    //   }
+    //   std::cout << std::endl;
+    // }
 
-    //std::vector<int> beams(obs_num);
-    //std::iota(test.begin(), test.end(), 1);
+    //setEnvStartGoal(env, 0.025, 0.025, 0, 0.4, 0.3, 0, start_id, goal_id);
+    env.GetCoordFromState(goal_id, x, y, th);
+    std::cout << "goal x:  " << x << " y: " << y << " id: " << goal_id << std::endl;
+    env.GetCoordFromState(start_id, x, y, th);
+    std::cout << "start x:  " << x << " y: " << y << " id: " << start_id << std::endl;
+    // initialize a planner with start and goal state
+    SBPLPlanner* planner = NULL;
+    double initialEpsilon = 3.0;
+    bool bsearchuntilfirstsolution = false;
+    
+    HomotopicBasedHeuristic hanchor(&env, &S);
+    HomotopicBasedHeuristic h1(&env, &S);
+    HomotopicBasedHeuristic h2(&env, &S);
+    HomotopicBasedHeuristic h3(&env, &S);
+
+    HomotopicBasedHeuristic* heurs[3];
+    heurs[0] = &h1;
+    heurs[1] = &h2;
+    heurs[2] = &h3;
+    
+    std::cout<< start_id << std::endl;
+    std::cout<< "initing" << std::endl;
+    initializePlanner(planner, env, S, centroids, start_id, goal_id, initialEpsilon, 
+    		      bsearchuntilfirstsolution, hanchor, heurs, 3);
+    std::cout<< "initialized" << std::endl;
     
     std::priority_queue<vertex_sig, vertex_sig_vec, comparator> Q;
     std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>  prev_;
     std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig> goals;
     env.HBSP(Q, prev_, goals, true, centroids, S, suffixes, env, start_id, goal_id);
-
-    std::unordered_map<std::pair<int, std::vector<int> >, std::vector<std::pair<int, std::vector<int> > >, hash_vertex_sig> paths_;
-    env.CreateGoalSet(goal_id, S, goals);
-    env.GetHBSPPaths(goals, prev_, paths_);
+        
+    //std::unordered_map<std::pair<int, std::vector<int> >, std::vector<std::pair<int, std::vector<int> > >, hash_vertex_sig> paths_;
+    //env.CreateGoalSet(goal_id, S, goals);
+    //env.GetHBSPPaths(goals, prev_, paths_);
 
     vector<int> solution_stateIDs;
-    std::cout << goals.size() << std::endl;
-    int cx, cy, cth;
-    for(auto& p: paths_) {
-      for(auto& c: p.second) {
-    	env.GetCoordFromState(c.first, cx, cy, cth);
-    	std::cout << "(" << cx << ", " << cy << ") ";
-    	solution_stateIDs.push_back(c.first);
-    	for(auto& sig: c.second)
-    	  std::cout << sig << " ";
-    	std::cout << std::endl;
-      }
-      std::cout << std::endl;
-    }
-    //std::string filename("env_simple.txt");
-    //writeSolution(env, solution_stateIDs, filename.c_str());
+    // std::cout << goals.size() << std::endl;
+    // int cx, cy, cth;
+    // for(auto& p: paths_) {
+    //   for(auto& c: p.second) {
+    // 	env.GetCoordFromState(c.first, cx, cy, cth);
+    // 	std::cout << "(" << cx << ", " << cy << ") ";
+    // 	solution_stateIDs.push_back(c.first);
+    // 	for(auto& sig: c.second)
+    // 	  std::cout << sig << " ";
+    // 	std::cout << std::endl;
+    //   }
+    //   std::cout << std::endl;
+    // }
+    
+    // plan
+    double allocated_time_secs = 10.0; // in seconds
+    runPlanner(planner, allocated_time_secs, solution_stateIDs);
+ 
+    //print stats
+    env.PrintTimeStat(stdout);
+
+    //write out solutions
+    std::string filename("sol.txt");
+    writeSolution(env, solution_stateIDs, filename.c_str());
+ 
+    delete planner;
 }
  
  

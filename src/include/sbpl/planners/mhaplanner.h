@@ -46,7 +46,7 @@ struct MHASearchState
     bool closed_in_anc;
     bool closed_in_add;
 
-    std::vector< int> sig;
+    std::vector<int> sig;
 
     
     struct HeapData
@@ -64,8 +64,8 @@ public:
 
     MHAPlanner(
             DiscreteSpaceInformation* environment,
-	    std::vector< std::vector<int > > S,
-	    std::unordered_map<int, std::pair<int,int> > centroids,
+	    std::vector< std::vector<int > >& S,
+	    std::unordered_map<int, std::pair<int,int> >& centroids,
             HomotopicBasedHeuristic* hanchor,
             HomotopicBasedHeuristic** heurs,
             int hcount);

@@ -750,7 +750,8 @@ public:
        std::unordered_map<std::pair<int, std::vector<int> >, std::vector<std::pair<int, std::vector<int> > >, hash_vertex_sig>& paths_);
 
     virtual int GetHBSPCost(std::pair<int, std::vector<int> > v);
-    
+
+    virtual int GetEuclideanDistToGoal(int& state_id);
 protected:
     //hash table of size x_size*y_size. Maps from coords to stateId
     int HashTableSize;

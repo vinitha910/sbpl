@@ -29,21 +29,45 @@
  
 #include <sbpl/heuristics/homotopic_based_heuristic.h>
 #include <sbpl/discrete_space_information/environment_navxythetalat.h>
+#include <iostream>
+#include <memory>
 
-HomotopicBasedHeuristic::HomotopicBasedHeuristic(DiscreteSpaceInformation* environment) :
-    Heuristic(environment)
+HomotopicBasedHeuristic::HomotopicBasedHeuristic(EnvironmentNAVXYTHETALAT* environment,
+						 std::vector<std::vector<int> >* S) 
 {
+  S_ = S;
+  env_ = new EnvironmentNAVXYTHETALAT;
+  *env_ = *environment;
+  //m_environment = new EnvironmentNAVXYTHETALAT;
 }
 
 int HomotopicBasedHeuristic::GetGoalHeuristic(int& hidx, int& state_id, std::vector<int>& sig)
 {
-  EnvironmentNAVXYTHETALAT* env_ptr = dynamic_cast<EnvironmentNAVXYTHETALAT*>(m_environment);
-  if(env_ptr){
+  // std::vector<int> Signature = S_->at(hidx);
+  // std::cout << "Sig: " << S_->at(hidx).size() << std::endl;
+  // bool winding = true;
+  // while(winding && !Signature.empty() && !sig.empty()) {
+  //   if(Signature.back() == sig.front()) {
+  //     Signature.pop_back();
+  //     sig.erase(sig.begin());
+  //   }else{
+  //     winding = false;
+  //   }
+  // }
+  //EnvironmentNAVXYTHETALAT* env_ = dynamic_cast<EnvironmentNAVXYTHETALAT*>(m_environment);
+  //if(env_){
     std::pair<int, std::vector<int> > v = make_pair(state_id, sig);
-    return env_ptr->GetHBSPCost(v);
-  } else {
-    SBPL_ERROR("Heuristic Function can only be used with EnvironmentNAVXYTHETALAT");
-  }
+    
+    if(hidx == 0){
+      std::cout << "ANCHOR" << std::endl;
+      return env_->GetGoalHeuristic(state_id);
+    } else {
+      std::cout << "HBSP" << std::endl;
+      return env_->GetHBSPCost(v);
+    }
+  // } else {
+  //   SBPL_ERROR("Heuristic Function can only be used with EnvironmentNAVXYTHETALAT");
+  // }
 }
 
 // int HomotopicBasedHeuristic::GetStartHeuristic(int state_id)

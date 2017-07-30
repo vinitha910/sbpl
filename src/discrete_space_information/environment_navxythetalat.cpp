@@ -2342,6 +2342,7 @@ void EnvironmentNAVXYTHETALAT::GetCoordFromState(
     int stateID, int& x, int& y, int& theta) const
 {
     EnvNAVXYTHETALATHashEntry_t* HashEntry = StateID2CoordTable[stateID];
+    
     x = HashEntry->X;
     y = HashEntry->Y;
     theta = HashEntry->Theta;
@@ -2685,7 +2686,7 @@ EnvironmentNAVXYTHETALAT::CreateNewHashEntry_lookup(int X, int Y, int Theta)
 
     // insert into the tables
     StateID2CoordTable.push_back(HashEntry);
-
+    
     int index = XYTHETA2INDEX(X,Y,Theta);
 
 #if DEBUG
@@ -3049,7 +3050,7 @@ void EnvironmentNAVXYTHETALAT::InitializeEnvironment()
     }
 
     // initialize the map from StateID to Coord
-    StateID2CoordTable.clear();
+    //StateID2CoordTable.clear();
 
     // create start state
     if (NULL == (HashEntry = (this->*GetHashEntry)(
@@ -3147,6 +3148,7 @@ int EnvironmentNAVXYTHETALAT::GetFromToHeuristic(int FromStateID, int ToStateID)
 
 int EnvironmentNAVXYTHETALAT::GetGoalHeuristic(int stateID)
 {
+  std::cout << "table size: " << StateID2CoordTable.size() << std::endl;
 #if USE_HEUR==0
     return 0;
 #endif
@@ -3156,13 +3158,13 @@ int EnvironmentNAVXYTHETALAT::GetGoalHeuristic(int stateID)
         throw SBPL_Exception("ERROR in EnvNAVXYTHETALAT... function: stateID illegal");
     }
 #endif
-
+    
     EnvNAVXYTHETALATHashEntry_t* HashEntry = StateID2CoordTable[stateID];
     // computes distances from start state that is grid2D, so it is EndX_c EndY_c
     int h2D = grid2Dsearchfromgoal->getlowerboundoncostfromstart_inmm(HashEntry->X, HashEntry->Y);
     int hEuclid = (int)(NAVXYTHETALAT_COSTMULT_MTOMM *
             EuclideanDistance_m(HashEntry->X, HashEntry->Y, EnvNAVXYTHETALATCfg.EndX_c, EnvNAVXYTHETALATCfg.EndY_c));
-
+    
     // define this function if it is used in the planner (heuristic backward search would use it)
     return (int)(((double)__max(h2D, hEuclid)) / EnvNAVXYTHETALATCfg.nominalvel_mpersecs);
 }
@@ -3519,7 +3521,7 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
   int vx, vy, vtheta, ux, uy, utheta, beam;
   env.GetCoordFromState(v_id, vx, vy, vtheta); 
   env.GetCoordFromState(u.first, ux, uy, utheta);
-  std::cout << "(" << ux << ", " << uy << ") Successor: {(" << vx << ", " << vy << "), ";
+  //std::cout << "(" << ux << ", " << uy << ") Successor: {(" << vx << ", " << vy << "), ";
 
   for(int i = 0; i < difference.size(); ++i) {
     beam = difference[i];
@@ -3527,7 +3529,7 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
     if(vx >= beam_coor.first && vy < beam_coor.second &&
        ux < beam_coor.first) {
       if(!succ_sig.empty() && succ_sig.back() == -1 * beam){
-	std::cout << "ERASING -" << std::endl;
+	//std::cout << "ERASING -" << std::endl;
 	succ_sig.pop_back();
 	//return;
       }
@@ -3535,7 +3537,7 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
     } else if(vx <= beam_coor.first && vy < beam_coor.second &&
 	      ux > beam_coor.first) {
       if(!succ_sig.empty() && succ_sig.back() == beam){
-	std::cout << "ERASING" << std::endl;
+	//std::cout << "ERASING" << std::endl;
 	succ_sig.pop_back();
 	///return;
       }
@@ -3580,10 +3582,10 @@ void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_v
 
     for (int sidx = 0; sidx < succ_ids.size(); ++sidx) {
       Signature(u, succ_ids[sidx], env, centroids, succ_sig);
-      for (auto& x: succ_sig) {
-        std::cout << x << " ";
-      }
-      std::cout << "}" << std::endl;
+      // for (auto& x: succ_sig) {
+      //   std::cout << x << " ";
+      // }
+      // std::cout << "}" << std::endl;
 
       // If the current siguature not in set of suffixes
       if(sig_restricted_succ && !succ_sig.empty() &&
@@ -3596,7 +3598,7 @@ void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_v
       std::pair<int, std::vector<int>> curr_vertex = std::make_pair(succ_ids[sidx], succ_sig);
       // Check if current vertex was explored, i.e. if dist is specified 
       if(dist_.find(curr_vertex) == dist_.end() || alt < dist_[curr_vertex]) {
-	std::cout << "COST: " << alt << std::endl;
+	//std::cout << "COST: " << alt << std::endl;
 	dist_[curr_vertex] = alt;
 	if(prev_.count(curr_vertex) > 0){
 	  prev_.at(curr_vertex) = u;
@@ -3648,8 +3650,23 @@ void EnvironmentNAVXYTHETALAT::GetHBSPPaths(
 }
 
 int EnvironmentNAVXYTHETALAT::GetHBSPCost(std::pair<int, std::vector<int> > v){
-  if(dist_.count(v) > 0)
+  if(dist_.count(v) > 0){
+    std::cout << "(" << v.first << ", ";
+    for(auto& x: v.second)
+      std::cout << x << " ";
+    std::cout << ")" << std::endl;
     return dist_.at(v);
-  
+  }
   return -1;
+}
+
+int EnvironmentNAVXYTHETALAT::GetEuclideanDistToGoal(int& state_id) {
+  int sx, sy, stheta;
+  GetCoordFromState(state_id, sx, sy, stheta);
+
+  int gx = DISCXY2CONT(EnvNAVXYTHETALATCfg.EndX_c, EnvNAVXYTHETALATCfg.cellsize_m);
+  int gy = DISCXY2CONT(EnvNAVXYTHETALATCfg.EndY_c, EnvNAVXYTHETALATCfg.cellsize_m);
+ 
+  int sqdist = ((gx - sx) * (gx - sx) + (gy - sy) * (gy - sy));
+  return floor(EnvNAVXYTHETALATCfg.cellsize_m * sqrt((double)sqdist));
 }

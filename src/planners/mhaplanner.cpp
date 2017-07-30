@@ -36,6 +36,7 @@
 #include <algorithm>
 
 #include <sbpl/utils/key.h>
+#include <iostream>
 
 static double GetTime()
 {
@@ -44,8 +45,8 @@ static double GetTime()
 
 MHAPlanner::MHAPlanner(
     DiscreteSpaceInformation* environment,
-    std::vector< std::vector<int > > S,
-    std::unordered_map<int, std::pair<int,int> > centroids,
+    std::vector< std::vector<int > >& S,
+    std::unordered_map<int, std::pair<int,int> >& centroids,
     HomotopicBasedHeuristic* hanchor,
     HomotopicBasedHeuristic** heurs,
     int hcount)
@@ -105,7 +106,8 @@ int MHAPlanner::set_start(int start_stateID)
         return 0;
     }
     else {
-        return 1;
+      std::cout<< "setting start" << std::endl;
+      return 1;
     }
 }
 
@@ -116,6 +118,7 @@ int MHAPlanner::set_goal(int goal_stateID)
         return 0;
     }
     else {
+      std::cout<< "setting goal" << std::endl;
         return 1;
     }
 }
@@ -167,13 +170,13 @@ int MHAPlanner::replan(
     SBPL_INFO("MHA Search parameters:");
     SBPL_INFO("  MHA Epsilon: %0.3f", m_initial_eps_mha);
     SBPL_INFO("  Max Expansions: %d", m_max_expansions);
-
+    
     environment_->EnsureHeuristicsUpdated(true); // TODO: support backwards search
-
+    
     // TODO: pick up from where last search left off and detect lazy
     // reinitializations
     reinit_search();
-
+    
     m_eps = m_params.initial_eps;
     m_eps_mha = m_initial_eps_mha;
     m_eps_satisfied = (double)INFINITECOST;
@@ -191,7 +194,7 @@ int MHAPlanner::replan(
     reinit_state(m_goal_state,sig);
     reinit_state(m_start_state,sig);
     m_start_state->g = 0;
-
+    
     // insert start state into all heaps with key(start, i) as priority
     for (int hidx = 0; hidx < num_heuristics(); ++hidx) {
         CKey key;
@@ -487,11 +490,13 @@ void MHAPlanner::init_state(
     int state_id,
     std::vector<int> sig)
 {
+    state = new(state) MHASearchState;
     state->call_number = 0; // not initialized for any iteration
     state->state_id = state_id;
     state->closed_in_anc = false;
     state->closed_in_add = false;
     state->sig = sig;
+    std::cout << "mha: " << state_id << std::endl;
     for (int i = 0; i < num_heuristics(); ++i) {
         state->od[i].open_state.heapindex = 0;
         state->od[i].h = compute_heuristic(state->state_id, i, state->sig);
@@ -503,6 +508,11 @@ void MHAPlanner::init_state(
 
 void MHAPlanner::reinit_state(MHASearchState* state, std::vector<int> sig)
 {
+  std::cout << "SIG: ";
+  for(auto& x: sig)
+    std::cout << x << " ";
+  std::cout << std::endl;
+  
     if (state->call_number != m_call_number) {
         state->call_number = m_call_number;
         state->g = INFINITECOST;
@@ -511,7 +521,9 @@ void MHAPlanner::reinit_state(MHASearchState* state, std::vector<int> sig)
         state->closed_in_anc = false;
         state->closed_in_add = false;
 
+	//state->sig.resize(sig.size());
 	state->sig = sig;
+	std::cout << "assigned sig" << std::endl;
         for (int i = 0; i < num_heuristics(); ++i) {
             state->od[i].open_state.heapindex = 0;
             state->od[i].h = compute_heuristic(state->state_id, i, state->sig);
@@ -616,13 +628,12 @@ MHASearchState* MHAPlanner::state_from_open_state(
 
 int MHAPlanner::compute_heuristic(int state_id, int hidx, std::vector<int> sig)
 {
-    if (hidx == 0) {
-      return m_hanchor->GetGoalHeuristic(hidx, state_id, sig);
-    }
-    else {
-      int hindx = hidx - 1;
-      return m_heurs[hidx - 1]->GetGoalHeuristic(hindx, state_id, sig);
-    }
+  if (hidx == 0) {
+    return m_hanchor->GetGoalHeuristic(hidx, state_id, sig);
+  }
+  else {
+    return m_heurs[hidx - 1]->GetGoalHeuristic(hidx, state_id, sig);
+  }
 }
 
 int MHAPlanner::get_minf(CHeap& pq) const
