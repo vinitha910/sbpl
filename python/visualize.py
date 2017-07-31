@@ -67,7 +67,7 @@ def plot_cont_planned_path(filename, cell_size, ax):
  
 if __name__ == '__main__':
     (map_values, cell_size) = get_map(sys.argv[1])
-    fig = plt.figure(figsize=(30,30), dpi=100)
+    fig = plt.figure(dpi=300)
     ax = fig.add_subplot(111)
     plt.imshow(map_values, vmin=0, vmax=1, cmap='jet', origin='lower')
     plt.ylim([0, map_values.shape[0]])
@@ -76,5 +76,6 @@ if __name__ == '__main__':
     plot_planned_path(sys.argv[2], ax, 'y')
     #plot_planned_path(sys.argv[3], ax, 'w')
     #plot_planned_path(sys.argv[4], ax, 'g')
+    #plot_planned_path(sys.argv[5], ax, 'c')
     plt.gca().invert_yaxis()
     plt.show()

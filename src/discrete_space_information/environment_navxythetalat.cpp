@@ -3148,7 +3148,6 @@ int EnvironmentNAVXYTHETALAT::GetFromToHeuristic(int FromStateID, int ToStateID)
 
 int EnvironmentNAVXYTHETALAT::GetGoalHeuristic(int stateID)
 {
-  std::cout << "table size: " << StateID2CoordTable.size() << std::endl;
 #if USE_HEUR==0
     return 0;
 #endif
@@ -3564,10 +3563,7 @@ void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_v
     dist_.insert(std::make_pair(init_v, 0));
     Q.push(init_v);
     CreateGoalSet(end_id, S, goals);
-    std::cout << "Goals size: " << goals.size() << std::endl;
-  }// else {
-   // goals.insert(std::make_pair(end_id, sig));
-  //}
+  }
   
   std::vector<int> succ_ids;
   std::vector<int> costs;
@@ -3643,7 +3639,6 @@ void EnvironmentNAVXYTHETALAT::GetHBSPPaths(
 	prev_exists = false;
     }
     paths_.insert(std::make_pair(g, path));
-    std::cout << path.size() << std::endl;
     path.clear();
     prev_exists = true;
   }
@@ -3651,13 +3646,13 @@ void EnvironmentNAVXYTHETALAT::GetHBSPPaths(
 
 int EnvironmentNAVXYTHETALAT::GetHBSPCost(std::pair<int, std::vector<int> > v){
   if(dist_.count(v) > 0){
-    std::cout << "(" << v.first << ", ";
-    for(auto& x: v.second)
-      std::cout << x << " ";
-    std::cout << ")" << std::endl;
+    // std::cout << "(" << v.first << ", ";
+    // for(auto& x: v.second)
+    //   std::cout << x << " ";
+    // std::cout << ")" << std::endl;
     return dist_.at(v);
   }
-  return -1;
+  return 100000;
 }
 
 int EnvironmentNAVXYTHETALAT::GetEuclideanDistToGoal(int& state_id) {

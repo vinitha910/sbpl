@@ -38,7 +38,6 @@ HomotopicBasedHeuristic::HomotopicBasedHeuristic(EnvironmentNAVXYTHETALAT* envir
   S_ = S;
   env_ = new EnvironmentNAVXYTHETALAT;
   *env_ = *environment;
-  //m_environment = new EnvironmentNAVXYTHETALAT;
 }
 
 int HomotopicBasedHeuristic::GetGoalHeuristic(int& hidx, int& state_id, std::vector<int>& sig)
@@ -54,28 +53,12 @@ int HomotopicBasedHeuristic::GetGoalHeuristic(int& hidx, int& state_id, std::vec
   //     winding = false;
   //   }
   // }
-  //EnvironmentNAVXYTHETALAT* env_ = dynamic_cast<EnvironmentNAVXYTHETALAT*>(m_environment);
-  //if(env_){
+
     std::pair<int, std::vector<int> > v = make_pair(state_id, sig);
     
     if(hidx == 0){
-      std::cout << "ANCHOR" << std::endl;
       return env_->GetGoalHeuristic(state_id);
     } else {
-      std::cout << "HBSP" << std::endl;
       return env_->GetHBSPCost(v);
     }
-  // } else {
-  //   SBPL_ERROR("Heuristic Function can only be used with EnvironmentNAVXYTHETALAT");
-  // }
 }
-
-// int HomotopicBasedHeuristic::GetStartHeuristic(int state_id)
-// {
-//     return m_environment->GetStartHeuristic(state_id);
-// }
-
-// int HomotopicBasedHeuristic::GetFromToHeuristic(int from_id, int to_id)
-// {
-//     return m_environment->GetFromToHeuristic(from_id, to_id);
-// }

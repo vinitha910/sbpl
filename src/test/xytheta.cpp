@@ -55,9 +55,7 @@ void initializePlanner(SBPLPlanner*& planner,
 		       HomotopicBasedHeuristic hanchor,
 		       HomotopicBasedHeuristic** heurs,
 		       int hcount){
-  std::cout<< "initing" << std::endl;
   planner = new MHAPlanner(&env, S, centroids, &hanchor, heurs, hcount);
-  std::cout<< "initialized" << std::endl;
     if (planner->set_goal(goal_id) == 0) {
         printf("ERROR: failed to set goal state\n");
 	throw new SBPL_Exception();
@@ -131,10 +129,11 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     //setEnvStartGoal(env, .11, .11, 0, 35, 47.5, 0, start_id, goal_id);
     //setEnvStartGoal(env, 0.1, 0.125, 0, 0.325, 0.125, 0, start_id, goal_id);
     //setEnvStartGoal(env, 0.325, 0.125, 0, 0.025, 0, 0, start_id, goal_id);
-    setEnvStartGoal(env, 0.4, 0.3, 0, 0.025, 0.025, 0, start_id, goal_id);
-    // setEnvStartGoal(env, .15, .15, 0, 0, 0., 0, start_id, goal_id);
-    // std::cout << start_id << " " << goal_id << std::endl;
-    int x, y, th;
+    //setEnvStartGoal(env, 0.4, 0.3, 0, 0.025, 0.025, 0, start_id, goal_id);
+    //setEnvStartGoal(env, .15, .15, 0, 0, 0., 0, start_id, goal_id);
+    setEnvStartGoal(env, 1.375, 0.575, 0.025, 0.025, 0, 0, start_id, goal_id);
+    
+    // int x, y, th;
     // env.GetCoordFromState(goal_id, x, y, th);
     // std::cout << "goal x:  " << x << " y: " << y << std::endl;
     // env.GetCoordFromState(start_id, x, y, th);
@@ -154,9 +153,9 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     //    std::cout << x.first << ": (" << x.second.first << ", " << x.second.second << ")" << std::endl;
 
     //std::vector<std::vector<int> > S = {{1,3},{3}};
-    //std::vector<std::vector<int> > S = {{-3,-1}};
-    std::vector<std::vector<int> > S = {{-2},{-6,-4,-5,-1,-3,-2},{-5,-1,-2}};
-    //std::vector<std::vector<int> > S = {{-2,-1}};
+    std::vector<std::vector<int> > S = {{},{-2},{-4,-2},{-4,-3,-2}};
+    //std::vector<std::vector<int> > S = {{-2},{-6,-4,-5,-1,-3,-2},{-5,-1,-2}};
+    //std::vector<std::vector<int> > S = {{-2}};
     std::unordered_set<std::vector<int>, EnvironmentNAVXYTHETALAT::vector_hash> suffixes;
     env.Suffixes(S, suffixes);
     // for (auto& x: suffixes) {
@@ -165,32 +164,6 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     //   }
     //   std::cout << std::endl;
     // }
-
-    //setEnvStartGoal(env, 0.025, 0.025, 0, 0.4, 0.3, 0, start_id, goal_id);
-    env.GetCoordFromState(goal_id, x, y, th);
-    std::cout << "goal x:  " << x << " y: " << y << " id: " << goal_id << std::endl;
-    env.GetCoordFromState(start_id, x, y, th);
-    std::cout << "start x:  " << x << " y: " << y << " id: " << start_id << std::endl;
-    // initialize a planner with start and goal state
-    SBPLPlanner* planner = NULL;
-    double initialEpsilon = 3.0;
-    bool bsearchuntilfirstsolution = false;
-    
-    HomotopicBasedHeuristic hanchor(&env, &S);
-    HomotopicBasedHeuristic h1(&env, &S);
-    HomotopicBasedHeuristic h2(&env, &S);
-    HomotopicBasedHeuristic h3(&env, &S);
-
-    HomotopicBasedHeuristic* heurs[3];
-    heurs[0] = &h1;
-    heurs[1] = &h2;
-    heurs[2] = &h3;
-    
-    std::cout<< start_id << std::endl;
-    std::cout<< "initing" << std::endl;
-    initializePlanner(planner, env, S, centroids, start_id, goal_id, initialEpsilon, 
-    		      bsearchuntilfirstsolution, hanchor, heurs, 3);
-    std::cout<< "initialized" << std::endl;
     
     std::priority_queue<vertex_sig, vertex_sig_vec, comparator> Q;
     std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>  prev_;
@@ -216,6 +189,26 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     //   std::cout << std::endl;
     // }
     
+    // initialize a planner with start and goal state
+    SBPLPlanner* planner = NULL;
+    double initialEpsilon = 3.0;
+    bool bsearchuntilfirstsolution = false;
+    
+    HomotopicBasedHeuristic hanchor(&env, &S);
+    HomotopicBasedHeuristic h1(&env, &S);
+    HomotopicBasedHeuristic h2(&env, &S);
+    HomotopicBasedHeuristic h3(&env, &S);
+    HomotopicBasedHeuristic h4(&env, &S);
+
+    HomotopicBasedHeuristic* heurs[3];
+    heurs[0] = &h1;
+    heurs[1] = &h2;
+    heurs[2] = &h3;
+    heurs[3] = &h4;
+    
+    initializePlanner(planner, env, S, centroids, start_id, goal_id, initialEpsilon, 
+    		      bsearchuntilfirstsolution, hanchor, heurs, 4);
+    
     // plan
     double allocated_time_secs = 10.0; // in seconds
     runPlanner(planner, allocated_time_secs, solution_stateIDs);
@@ -224,7 +217,7 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     env.PrintTimeStat(stdout);
 
     //write out solutions
-    std::string filename("sol.txt");
+    std::string filename("sol_deadly.txt");
     writeSolution(env, solution_stateIDs, filename.c_str());
  
     delete planner;

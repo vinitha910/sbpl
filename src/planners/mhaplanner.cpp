@@ -106,7 +106,6 @@ int MHAPlanner::set_start(int start_stateID)
         return 0;
     }
     else {
-      std::cout<< "setting start" << std::endl;
       return 1;
     }
 }
@@ -118,7 +117,6 @@ int MHAPlanner::set_goal(int goal_stateID)
         return 0;
     }
     else {
-      std::cout<< "setting goal" << std::endl;
         return 1;
     }
 }
@@ -496,7 +494,6 @@ void MHAPlanner::init_state(
     state->closed_in_anc = false;
     state->closed_in_add = false;
     state->sig = sig;
-    std::cout << "mha: " << state_id << std::endl;
     for (int i = 0; i < num_heuristics(); ++i) {
         state->od[i].open_state.heapindex = 0;
         state->od[i].h = compute_heuristic(state->state_id, i, state->sig);
@@ -508,10 +505,10 @@ void MHAPlanner::init_state(
 
 void MHAPlanner::reinit_state(MHASearchState* state, std::vector<int> sig)
 {
-  std::cout << "SIG: ";
-  for(auto& x: sig)
-    std::cout << x << " ";
-  std::cout << std::endl;
+  // std::cout << "SIG: ";
+  // for(auto& x: sig)
+  //   std::cout << x << " ";
+  // std::cout << std::endl;
   
     if (state->call_number != m_call_number) {
         state->call_number = m_call_number;
@@ -521,9 +518,7 @@ void MHAPlanner::reinit_state(MHASearchState* state, std::vector<int> sig)
         state->closed_in_anc = false;
         state->closed_in_add = false;
 
-	//state->sig.resize(sig.size());
 	state->sig = sig;
-	std::cout << "assigned sig" << std::endl;
         for (int i = 0; i < num_heuristics(); ++i) {
             state->od[i].open_state.heapindex = 0;
             state->od[i].h = compute_heuristic(state->state_id, i, state->sig);
