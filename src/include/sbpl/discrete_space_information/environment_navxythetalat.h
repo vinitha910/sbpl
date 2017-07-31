@@ -34,6 +34,7 @@
 #include <vector>
 #include <sstream>
 #include <unordered_map>
+#include <map>
 #include <unordered_set>
 #include <algorithm>
 #include <queue>
@@ -702,6 +703,13 @@ public:
         return seed;
       }
     };
+
+    struct centroid_comparator {
+      bool operator()(const std::pair<int,int> c1,
+		      const std::pair<int,int> c2) const {
+	return(c1.first < c2.first);
+      }
+    };
     
     // virtual void FindObsCells(std::unordered_set<std::pair<int,int>, pair_hash >& obs_cells);
     virtual void CheckNeighbors(int x, 
@@ -715,7 +723,7 @@ public:
 			      int& obs_num);
 
     virtual void FindCentroids(std::unordered_map<std::pair<int,int>, int, pair_hash> obs_map, 
-			       std::unordered_map<int, std::pair<int,int> >& centroids,
+			       std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
 			       int obs_num);
 
     // Creates an unordered set of all of the suffixes for the user-defined signature set
@@ -729,7 +737,7 @@ public:
     virtual void Signature(std::pair<int, std::vector<int> > u,
 			   int v_id,
 			   EnvironmentNAVXYTHETALAT& env,
-			   std::unordered_map<int, std::pair<int,int> >& centroids,
+			   std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
 			   std::vector<int>& succ_sig);
 
     virtual void HBSP
@@ -737,7 +745,7 @@ public:
        std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>& prev_,
        std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,
        bool sig_restricted_succ,
-       std::unordered_map<int, std::pair<int,int> >& centroids,
+       std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
        std::vector<std::vector<int> >& S,
        std::unordered_set<std::vector<int>, vector_hash>& suffixes,
        EnvironmentNAVXYTHETALAT& env,

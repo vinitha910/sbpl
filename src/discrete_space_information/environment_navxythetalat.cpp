@@ -3467,15 +3467,17 @@ void EnvironmentNAVXYTHETALAT::CreateObsMap(std::unordered_map<std::pair<int,int
 }  
 
 void EnvironmentNAVXYTHETALAT::FindCentroids(std::unordered_map<std::pair<int,int>, int, pair_hash> obs_map, 
-					     std::unordered_map<int, std::pair<int,int> >& centroids,
+					     std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
 					     int obs_num) {
-  bool diff_x = true;
+
+  std::unordered_set<int> beams;
   while(centroids.size() != obs_num) {
     for (auto& x: obs_map) {
-      if (centroids.count(x.second) > 0)
-	continue;
-      else { 
-	centroids.insert(std::make_pair(x.second,x.first));
+      if (beams.find(x.second) != beams.end()) {
+	  continue;
+      } else {
+	  centroids.insert(x);
+	  beams.insert(x.second);
       }
     }
   }
@@ -3503,28 +3505,26 @@ void EnvironmentNAVXYTHETALAT::CreateGoalSet(int end_id,
 void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
 					 int v_id,
 					 EnvironmentNAVXYTHETALAT& env,
-					 std::unordered_map<int, std::pair<int,int> >& centroids,
+					 std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
 					 std::vector<int>& succ_sig) {
 
-  succ_sig.assign(u.second.begin(), u.second.end());
-  std::vector<int> beams(centroids.size());// vector with size of u_sig ints.
-  std::iota(std::begin(beams), std::end(beams), 1); // Fill with 1, 2, ..., size of u_sig.
-  std::sort(u.second.begin(), u.second.end());
-  
-  std::vector<int> difference;
-  std::set_difference(beams.begin(), beams.end(),
-		      u.second.begin(), u.second.end(),
-		      std::back_inserter(difference)
-		      );
-  
   int vx, vy, vtheta, ux, uy, utheta, beam;
   env.GetCoordFromState(v_id, vx, vy, vtheta); 
   env.GetCoordFromState(u.first, ux, uy, utheta);
   //std::cout << "(" << ux << ", " << uy << ") Successor: {(" << vx << ", " << vy << "), ";
 
-  for(int i = 0; i < difference.size(); ++i) {
-    beam = difference[i];
-    std::pair<int,int> beam_coor = centroids.at(beam);
+  std::map<std::pair<int,int>, int, centroid_comparator>::iterator itlow,itup;
+  if(ux < vx) {
+    itlow = centroids.lower_bound(std::make_pair(ux,uy));
+    itup = centroids.upper_bound(std::make_pair(vx,vy));
+  } else {
+    itlow = centroids.lower_bound(std::make_pair(vx,vy));
+    itup = centroids.upper_bound(std::make_pair(ux,uy));
+  }
+				
+  for(auto i = itlow; i != itup; ++i) {
+    beam = i->second;
+    std::pair<int,int> beam_coor = i->first; 
     if(vx >= beam_coor.first && vy < beam_coor.second &&
        ux < beam_coor.first) {
       if(!succ_sig.empty() && succ_sig.back() == -1 * beam){
@@ -3545,7 +3545,7 @@ void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_v
 	   std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>& prev_,
 	   std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,
 	   bool sig_restricted_succ,
-	   std::unordered_map<int, std::pair<int,int> >& centroids,
+	   std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
            std::vector<std::vector<int> >& S,	  
            std::unordered_set<std::vector<int>, vector_hash>& suffixes,
 	   EnvironmentNAVXYTHETALAT& env,

@@ -49,7 +49,7 @@ void setEnvStartGoal(EnvironmentNAVXYTHETALAT& env,
 void initializePlanner(SBPLPlanner*& planner, 
                        EnvironmentNAVXYTHETALAT& env,
 		       std::vector< std::vector<int > >& S,
-		       std::unordered_map<int, std::pair<int,int> >& centroids,
+		       std::map<std::pair<int,int>, int, EnvironmentNAVXYTHETALAT::centroid_comparator>& centroids,
                        int start_id, int goal_id,
                        double initialEpsilon,
 		       bool bsearchuntilfirstsolution,
@@ -158,7 +158,7 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     // for (auto& x: obs_map)
     //  std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
 
-    std::unordered_map<int, std::pair<int,int> > centroids;
+    std::map<std::pair<int,int>, int, EnvironmentNAVXYTHETALAT::centroid_comparator> centroids;
     begin = clock();
     env.FindCentroids(obs_map, centroids, obs_num);
     end = clock();

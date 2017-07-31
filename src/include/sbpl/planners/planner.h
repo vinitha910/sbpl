@@ -33,7 +33,8 @@
 #include <cstddef>
 #include <vector>
 #include <sbpl/config.h>
-#include <unordered_map>
+#include <map>
+#include <sbpl/discrete_space_information/environment_navxythetalat.h>
 
 #define 	GETSTATEIND(stateid, mapid) StateID2IndexMapping[mapid][stateid]
 
@@ -347,7 +348,7 @@ public:
 protected:
     DiscreteSpaceInformation *environment_;
     std::vector< std::vector<int > > S_;
-      std::unordered_map<int, std::pair<int,int> > centroids_;
+    std::map<std::pair<int,int>, int, EnvironmentNAVXYTHETALAT::centroid_comparator> centroids_;
 };
 
 #endif

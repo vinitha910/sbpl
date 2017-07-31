@@ -34,7 +34,8 @@
 #include <sbpl/heuristics/homotopic_based_heuristic.h>
 #include <sbpl/planners/planner.h>
 #include <sbpl/utils/heap.h>
-#include <unordered_map>
+#include <map>
+#include <sbpl/discrete_space_information/environment_navxythetalat.h>
 
 struct MHASearchState
 {
@@ -65,7 +66,7 @@ public:
     MHAPlanner(
             DiscreteSpaceInformation* environment,
 	    std::vector< std::vector<int > >& S,
-	    std::unordered_map<int, std::pair<int,int> >& centroids,
+	    std::map<std::pair<int,int>, int, EnvironmentNAVXYTHETALAT::centroid_comparator>& centroids,
             HomotopicBasedHeuristic* hanchor,
             HomotopicBasedHeuristic** heurs,
             int hcount);

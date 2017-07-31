@@ -46,7 +46,7 @@ static double GetTime()
 MHAPlanner::MHAPlanner(
     DiscreteSpaceInformation* environment,
     std::vector< std::vector<int > >& S,
-    std::unordered_map<int, std::pair<int,int> >& centroids,
+    std::map<std::pair<int,int>, int, EnvironmentNAVXYTHETALAT::centroid_comparator>& centroids,
     HomotopicBasedHeuristic* hanchor,
     HomotopicBasedHeuristic** heurs,
     int hcount)
