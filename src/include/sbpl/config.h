@@ -50,7 +50,7 @@
 /**
  * \brief regular debugging
  */
-#define DEBUG 0
+#define DEBUG 10
 
 /**
  * \brief timing debugging

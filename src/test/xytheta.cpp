@@ -1,7 +1,8 @@
 #include <cstring>
 #include <iostream>
 #include <string>
- 
+#include <ctime>
+
 using namespace std;
  
 #include <sbpl/headers.h>
@@ -122,8 +123,10 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
  
     // initialize an environment
     EnvironmentNAVXYTHETALAT env;
+    double planning_time = 0;
+    static clock_t begin = clock();
     initializeEnv(env, perimeter, envCfgFilename, motPrimFilename);
- 
+	
     // specify a start and goal state
     int start_id, goal_id;
     //setEnvStartGoal(env, .11, .11, 0, 35, 47.5, 0, start_id, goal_id);
@@ -132,6 +135,10 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     //setEnvStartGoal(env, 0.4, 0.3, 0, 0.025, 0.025, 0, start_id, goal_id);
     //setEnvStartGoal(env, .15, .15, 0, 0, 0., 0, start_id, goal_id);
     setEnvStartGoal(env, 1.375, 0.575, 0.025, 0.025, 0, 0, start_id, goal_id);
+    static clock_t end = clock();
+    double elapsed_time = (double(end-begin)/CLOCKS_PER_SEC);
+    planning_time += elapsed_time;
+    std::cout << "Time to Initialize Environment: "<< elapsed_time <<" s"<< std::endl;
     
     // int x, y, th;
     // env.GetCoordFromState(goal_id, x, y, th);
@@ -141,14 +148,24 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
 
     std::unordered_map<std::pair<int,int>, int, EnvironmentNAVXYTHETALAT::pair_hash > obs_map;
     int obs_num = 0;
+    begin = clock();
     env.CreateObsMap(obs_map, obs_num);
-
+    end = clock();
+    elapsed_time = (double(end-begin)/CLOCKS_PER_SEC);
+    planning_time += elapsed_time;
+    std::cout << "Time to Create Obstacle Map: " << elapsed_time <<" s"<< std::endl;
+    
     // for (auto& x: obs_map)
     //  std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
 
     std::unordered_map<int, std::pair<int,int> > centroids;
+    begin = clock();
     env.FindCentroids(obs_map, centroids, obs_num);
-
+    end = clock();
+    elapsed_time = (double(end-begin)/CLOCKS_PER_SEC);
+    planning_time += elapsed_time;
+    std::cout << "Time to Find Centroids: " << elapsed_time <<" s"<< std::endl;
+    
     // for (auto& x: centroids)
     //    std::cout << x.first << ": (" << x.second.first << ", " << x.second.second << ")" << std::endl;
 
@@ -157,7 +174,13 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     //std::vector<std::vector<int> > S = {{-2},{-6,-4,-5,-1,-3,-2},{-5,-1,-2}};
     //std::vector<std::vector<int> > S = {{-2}};
     std::unordered_set<std::vector<int>, EnvironmentNAVXYTHETALAT::vector_hash> suffixes;
+    begin = clock(); 
     env.Suffixes(S, suffixes);
+    end = clock();
+    elapsed_time = (double(end-begin)/CLOCKS_PER_SEC);
+    planning_time += elapsed_time;
+    std::cout << "Time to Find Suffixes: " << elapsed_time <<" s"<< std::endl;
+    
     // for (auto& x: suffixes) {
     //   for (int i = 0; i < x.size(); ++i) {
     // 	std::cout << x[i] << " ";
@@ -168,8 +191,13 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     std::priority_queue<vertex_sig, vertex_sig_vec, comparator> Q;
     std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>  prev_;
     std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig> goals;
+    begin = clock();
     env.HBSP(Q, prev_, goals, true, centroids, S, suffixes, env, start_id, goal_id);
-        
+    end = clock();
+    elapsed_time = (double(end-begin)/CLOCKS_PER_SEC);
+    planning_time += elapsed_time;
+    std::cout << "HBSP: " << elapsed_time <<" s"<< std::endl;
+    
     //std::unordered_map<std::pair<int, std::vector<int> >, std::vector<std::pair<int, std::vector<int> > >, hash_vertex_sig> paths_;
     //env.CreateGoalSet(goal_id, S, goals);
     //env.GetHBSPPaths(goals, prev_, paths_);
@@ -205,21 +233,27 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     heurs[1] = &h2;
     heurs[2] = &h3;
     heurs[3] = &h4;
-    
+
+    begin = clock();
     initializePlanner(planner, env, S, centroids, start_id, goal_id, initialEpsilon, 
     		      bsearchuntilfirstsolution, hanchor, heurs, 4);
     
     // plan
     double allocated_time_secs = 10.0; // in seconds
     runPlanner(planner, allocated_time_secs, solution_stateIDs);
- 
+    
     //print stats
     env.PrintTimeStat(stdout);
 
     //write out solutions
     std::string filename("sol_deadly.txt");
     writeSolution(env, solution_stateIDs, filename.c_str());
- 
+
+    end = clock();
+    elapsed_time = (double(end-begin)/CLOCKS_PER_SEC);
+    planning_time += elapsed_time;
+    std::cout << "Time to Plan with MHA*: " << elapsed_time <<" s"<< std::endl;
+    std::cout << "TOTAL PLANNING TIME: " << planning_time <<" s"<< std::endl;
     delete planner;
 }
  

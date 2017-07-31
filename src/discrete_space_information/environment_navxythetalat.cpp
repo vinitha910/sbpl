@@ -3528,17 +3528,13 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
     if(vx >= beam_coor.first && vy < beam_coor.second &&
        ux < beam_coor.first) {
       if(!succ_sig.empty() && succ_sig.back() == -1 * beam){
-	//std::cout << "ERASING -" << std::endl;
 	succ_sig.pop_back();
-	//return;
       }
       succ_sig.push_back(beam);
     } else if(vx <= beam_coor.first && vy < beam_coor.second &&
 	      ux > beam_coor.first) {
       if(!succ_sig.empty() && succ_sig.back() == beam){
-	//std::cout << "ERASING" << std::endl;
 	succ_sig.pop_back();
-	///return;
       }
       succ_sig.push_back(-beam);
     }
