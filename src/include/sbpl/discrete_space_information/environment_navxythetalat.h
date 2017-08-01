@@ -705,8 +705,8 @@ public:
     };
 
     struct centroid_comparator {
-      bool operator()(const std::pair<int,int> c1,
-		      const std::pair<int,int> c2) const {
+      bool operator()(const std::pair<int,int>& c1,
+		      const std::pair<int,int>& c2) const {
 	return(c1.first < c2.first);
       }
     };

@@ -42,6 +42,7 @@ HomotopicBasedHeuristic::HomotopicBasedHeuristic(EnvironmentNAVXYTHETALAT* envir
 
 int HomotopicBasedHeuristic::GetGoalHeuristic(int& hidx, int& state_id, std::vector<int>& sig)
 {
+  // std::cout << hidx << std::endl;
   // std::vector<int> Signature = S_->at(hidx);
   // std::cout << "Sig: " << S_->at(hidx).size() << std::endl;
   // bool winding = true;

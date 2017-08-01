@@ -130,10 +130,15 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     // specify a start and goal state
     int start_id, goal_id;
     //setEnvStartGoal(env, .11, .11, 0, 35, 47.5, 0, start_id, goal_id);
-    //setEnvStartGoal(env, 0.1, 0.125, 0, 0.325, 0.125, 0, start_id, goal_id);
+
+    //ENV 1
     //setEnvStartGoal(env, 0.325, 0.125, 0, 0.025, 0, 0, start_id, goal_id);
+
+    //ENV 5
     //setEnvStartGoal(env, 0.4, 0.3, 0, 0.025, 0.025, 0, start_id, goal_id);
     //setEnvStartGoal(env, .15, .15, 0, 0, 0., 0, start_id, goal_id);
+
+    //ENV 6
     setEnvStartGoal(env, 1.375, 0.575, 0.025, 0.025, 0, 0, start_id, goal_id);
     static clock_t end = clock();
     double elapsed_time = (double(end-begin)/CLOCKS_PER_SEC);
@@ -156,7 +161,7 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     std::cout << "Time to Create Obstacle Map: " << elapsed_time <<" s"<< std::endl;
     
     // for (auto& x: obs_map)
-    //  std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
+    //   std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
 
     std::map<std::pair<int,int>, int, EnvironmentNAVXYTHETALAT::centroid_comparator> centroids;
     begin = clock();
@@ -166,12 +171,12 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     planning_time += elapsed_time;
     std::cout << "Time to Find Centroids: " << elapsed_time <<" s"<< std::endl;
     
-    // for (auto& x: centroids)
-    //    std::cout << x.first << ": (" << x.second.first << ", " << x.second.second << ")" << std::endl;
+    for (auto& x: centroids)
+      std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
 
-    //std::vector<std::vector<int> > S = {{1,3},{3}};
+    //std::vector<std::vector<int> > S = {{-3,-1},{-3}};
     std::vector<std::vector<int> > S = {{},{-2},{-4,-2},{-4,-3,-2}};
-    //std::vector<std::vector<int> > S = {{-2},{-6,-4,-5,-1,-3,-2},{-5,-1,-2}};
+    //std::vector<std::vector<int> > S = {{-2},{-6,-5,-4,-1,-3,-2},{-5,-1,-2}};
     //std::vector<std::vector<int> > S = {{-2}};
     std::unordered_set<std::vector<int>, EnvironmentNAVXYTHETALAT::vector_hash> suffixes;
     begin = clock(); 
@@ -198,9 +203,9 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     planning_time += elapsed_time;
     std::cout << "HBSP: " << elapsed_time <<" s"<< std::endl;
     
-    //std::unordered_map<std::pair<int, std::vector<int> >, std::vector<std::pair<int, std::vector<int> > >, hash_vertex_sig> paths_;
-    //env.CreateGoalSet(goal_id, S, goals);
-    //env.GetHBSPPaths(goals, prev_, paths_);
+    // std::unordered_map<std::pair<int, std::vector<int> >, std::vector<std::pair<int, std::vector<int> > >, hash_vertex_sig> paths_;
+    // env.CreateGoalSet(goal_id, S, goals);
+    // env.GetHBSPPaths(goals, prev_, paths_);
 
     vector<int> solution_stateIDs;
     // std::cout << goals.size() << std::endl;

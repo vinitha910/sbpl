@@ -3154,6 +3154,8 @@ int EnvironmentNAVXYTHETALAT::GetGoalHeuristic(int stateID)
 
 #if DEBUG
     if (stateID >= (int)StateID2CoordTable.size()) {
+      //std::cout << StateID2CoordTable.size() << std::endl;
+      //std::cout << stateID << std::endl;
         throw SBPL_Exception("ERROR in EnvNAVXYTHETALAT... function: stateID illegal");
     }
 #endif
@@ -3471,13 +3473,15 @@ void EnvironmentNAVXYTHETALAT::FindCentroids(std::unordered_map<std::pair<int,in
 					     int obs_num) {
 
   std::unordered_set<int> beams;
+  std::cout << obs_num << std::endl;
   while(centroids.size() != obs_num) {
     for (auto& x: obs_map) {
       if (beams.find(x.second) != beams.end()) {
 	  continue;
       } else {
-	  centroids.insert(x);
-	  beams.insert(x.second);
+	  centroids.insert(x);;
+	  if(centroids.size() != beams.size())
+	     beams.insert(x.second);
       }
     }
   }
@@ -3513,32 +3517,62 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
   env.GetCoordFromState(u.first, ux, uy, utheta);
   //std::cout << "(" << ux << ", " << uy << ") Successor: {(" << vx << ", " << vy << "), ";
 
-  std::map<std::pair<int,int>, int, centroid_comparator>::iterator itlow,itup;
-  if(ux < vx) {
-    itlow = centroids.lower_bound(std::make_pair(ux,uy));
-    itup = centroids.upper_bound(std::make_pair(vx,vy));
-  } else {
-    itlow = centroids.lower_bound(std::make_pair(vx,vy));
-    itup = centroids.upper_bound(std::make_pair(ux,uy));
-  }
-				
-  for(auto i = itlow; i != itup; ++i) {
-    beam = i->second;
-    std::pair<int,int> beam_coor = i->first; 
-    if(vx >= beam_coor.first && vy < beam_coor.second &&
-       ux < beam_coor.first) {
-      if(!succ_sig.empty() && succ_sig.back() == -1 * beam){
-	succ_sig.pop_back();
-      }
-      succ_sig.push_back(beam);
-    } else if(vx <= beam_coor.first && vy < beam_coor.second &&
-	      ux > beam_coor.first) {
-      if(!succ_sig.empty() && succ_sig.back() == beam){
-	succ_sig.pop_back();
-      }
-      succ_sig.push_back(-beam);
+  std::map<std::pair<int,int>, int, centroid_comparator>::iterator iter_low,iter_high;
+  int x_low, x_high, y_low, y_high;
+  if (ux < vx)
+    {
+      x_low = ux;
+      x_high= vx;
+      y_low = uy;
+      y_high = vy;
+    }
+  else
+    {
+      x_low = vx;
+      x_high= ux;
+      y_low = vy;
+      y_high = uy;
+    }
+
+  iter_low = centroids.lower_bound(std::make_pair(x_low, y_low));
+  iter_high = centroids.upper_bound(std::make_pair(x_high, y_high));
+
+  //collect signatures crossed from left to right
+  std::vector<int> added_signature;
+  for(auto iter = iter_low; iter != iter_high; ++iter)
+  {
+    beam = iter->second;
+    std::pair<int,int> beam_coor = iter->first; 
+    if(x_high >= beam_coor.first && y_high < beam_coor.second &&
+       x_low < beam_coor.first) {
+      added_signature.push_back(beam);
     }
   }
+
+  succ_sig.assign(u.second.begin(), u.second.end());
+  //update succ_sig
+  if (ux < vx)
+    {
+      for(auto iter = added_signature.begin(); iter != added_signature.end(); ++iter) {
+	int beam = *iter;
+	if(!succ_sig.empty() && succ_sig.back() == -1 * beam){
+	  succ_sig.pop_back();
+	} else {
+	  succ_sig.push_back(beam);
+	}
+      }
+    }
+  else //ux > vx
+    {
+      for(auto iter = added_signature.rbegin(); iter != added_signature.rend(); ++iter) {
+	int beam = *iter;
+	if(!succ_sig.empty() && succ_sig.back() == beam){
+	  succ_sig.pop_back();
+	} else {
+	  succ_sig.push_back(-1*beam);
+	}
+      }
+    }    
 }
 
 void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_vec, comparator>& Q,
@@ -3585,6 +3619,10 @@ void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_v
 	succ_sig.clear();
       	continue;
       }
+      // std::cout << "SIG: ";
+      // for(auto& x: succ_sig)
+      // 	std::cout << x << " ";
+      // std::cout << std::endl;
       //std::cout << "COST: " << costs[sidx] << std::endl;
       int alt = dist_[u] + costs[sidx];
       std::pair<int, std::vector<int>> curr_vertex = std::make_pair(succ_ids[sidx], succ_sig);
