@@ -3575,7 +3575,7 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
     }    
 }
 
-void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_vec, comparator>& Q,
+void EnvironmentNAVXYTHETALAT::HBSP(std::set<vertex_sig, comparator2>& Q,
 	   std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>& prev_,
 	   std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,
 	   bool sig_restricted_succ,
@@ -3585,13 +3585,14 @@ void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_v
 	   EnvironmentNAVXYTHETALAT& env,
 	   int start_id, 
 	   int end_id){
-  
+  static int  k = 0;
   dist_ = {};
   std::vector<int> sig;
   if(Q.empty()) {
     std::pair<int, std::vector<int> > init_v = std::make_pair(start_id, sig);
     dist_.insert(std::make_pair(init_v, 0));
-    Q.push(init_v);
+    //Q.push(init_v);
+    Q.insert(init_v);
     CreateGoalSet(end_id, S, goals);
   }
   
@@ -3599,13 +3600,42 @@ void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_v
   std::vector<int> costs;
   std::vector<int> succ_sig;
   while(!Q.empty()) {
-    std::pair<int, std::vector<int> > u = Q.top();
-    Q.pop();
+    // ++k;
+    // if (k==4)
+    //   return;
+    
+    //std::pair<int, std::vector<int> > u = Q.top(); 
+    std::pair<int, std::vector<int> > u = *(Q.begin());
+    //std::cout << "CURR: " << u.first << std::endl;
+    //Q.pop();
+    Q.erase(Q.begin());
     succ_ids.clear();
     costs.clear();
     env.GetSuccs(u.first, &succ_ids, &costs);
+    // std::cout << u.first << ": ";
+    // for(auto& x: succ_ids)
+    //   std::cout << x << " ";
+    // std::cout << std::endl;
+    
     assert(succ_ids.size() == costs.size());
 
+    int dist_u = dist_[u];
+    // for(auto& y: dist_)
+    //   	std::cout << "(" << y.first.first << ": " << y.second << ")" << std::endl;
+    // auto temp = Q;
+    // std::cout << "PQ: ";
+    // while(!temp.empty()){
+    //   std::cout << temp.top().first << " ";
+    //   temp.pop();
+    // }
+    // std::cout << std::endl;
+
+    // std::cout << "SET: ";
+    // for(auto s = Q.begin(); s != Q.end(); ++s)
+    //   std::cout << s->first << " ";
+    // std::cout << std::endl;
+
+    
     for (int sidx = 0; sidx < succ_ids.size(); ++sidx) {
       Signature(u, succ_ids[sidx], env, centroids, succ_sig);
       // for (auto& x: succ_sig) {
@@ -3624,10 +3654,12 @@ void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_v
       // 	std::cout << x << " ";
       // std::cout << std::endl;
       //std::cout << "COST: " << costs[sidx] << std::endl;
-      int alt = dist_[u] + costs[sidx];
+      int alt = dist_u + costs[sidx];
+      //std::cout << succ_ids[sidx] << ": " << alt << std::endl;
       std::pair<int, std::vector<int>> curr_vertex = std::make_pair(succ_ids[sidx], succ_sig);
-      // Check if current vertex was explored, i.e. if dist is specified 
-      if(dist_.find(curr_vertex) == dist_.end() || alt < dist_[curr_vertex]) {
+      // Check if current vertex was explored, i.e. if dist is specified
+      auto dist_curr = dist_.find(curr_vertex);
+      if(dist_curr == dist_.end() || alt < dist_curr->second) {
 	//std::cout << "COST: " << alt << std::endl;
 	dist_[curr_vertex] = alt;
 	if(prev_.count(curr_vertex) > 0){
@@ -3635,7 +3667,13 @@ void EnvironmentNAVXYTHETALAT::HBSP(std::priority_queue<vertex_sig, vertex_sig_v
 	} else {
 	  prev_.insert(std::make_pair(curr_vertex,u));
 	}
-    	Q.push(curr_vertex);
+	//Q.push(curr_vertex);
+	auto it = Q.find(curr_vertex);
+	if(it != Q.end()) {
+	  Q.erase(it);
+	  }
+	Q.insert(curr_vertex);
+	
 	// if (sig_restricted_succ && goals.count(curr_vertex) > 0) {
 	//   goals.erase(curr_vertex);
 	//   if (goals.empty()) {

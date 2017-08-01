@@ -39,6 +39,7 @@
 #include <algorithm>
 #include <queue>
 #include <stdlib.h>
+#include <iostream>
 
 #include <sbpl/discrete_space_information/environment.h>
 #include <sbpl/utils/utils.h>
@@ -70,21 +71,44 @@ typedef std::pair<int,std::vector<int> > vertex_sig;
 typedef std::vector<std::pair<int,std::vector<int> > > vertex_sig_vec;
 
 // Hashing function for vertex signature pair 
-struct hash_vertex_sig {
+class hash_vertex_sig {
+ public:
   std::size_t operator()(const std::pair<int,std::vector<int> >& key) const {
-    return 100000000*key.first + (key.second).size();
+    return int_hash_(key.first);
+    //return 100000000*key.first + (key.second).size();
   }
+ private:
+  std::hash<int> int_hash_;
 };
 
 // key: (q,s), value: distance to (q,s)/g value
-static std::unordered_map<std::pair<int, std::vector<int> >, int, hash_vertex_sig> dist_;
+
+typedef std::unordered_map<std::pair<int, std::vector<int> >, int, hash_vertex_sig> VertexCostMap;
+static VertexCostMap dist_;
 
 // For dijkstra's priority queue
 struct comparator {
-  bool operator()(const std::pair<int,std::vector<int> > v1,
-		  const std::pair<int,std::vector<int> > v2) const {
-    return(dist_[v1] > dist_[v2]);
+  bool operator()(const std::pair<int,std::vector<int> >& v1,
+		  const std::pair<int,std::vector<int> >& v2) const {
+    return(dist_[v1] <= dist_[v2]);
   }
+};
+
+class comparator2 {
+ public:
+ comparator2(VertexCostMap& dist):dist_map_(dist) {}
+    bool operator()(const std::pair<int,std::vector<int> >& v1,
+		  const std::pair<int,std::vector<int> >& v2) const {
+
+      /* std::cout << "comparing vertex ids: " << v1.first <<" and " <<v2.first */
+      /* 		<<"     with costs "<< dist_[v1] << " " << dist_[v2] <<"     with costs "<< dist_map_[v1] << " " << dist_map_[v2] << std::endl; */
+  
+
+      return(dist_[v1] <= dist_[v2]);
+  }
+
+ private:
+    VertexCostMap& dist_map_;
 };
 
 struct EnvNAVXYTHETALATAction_t
@@ -741,7 +765,7 @@ public:
 			   std::vector<int>& succ_sig);
 
     virtual void HBSP
-      (std::priority_queue<vertex_sig, vertex_sig_vec, comparator>& Q,
+      (std::set<vertex_sig, comparator2>& Q,
        std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>& prev_,
        std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,
        bool sig_restricted_succ,

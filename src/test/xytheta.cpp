@@ -193,7 +193,9 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     //   std::cout << std::endl;
     // }
     
-    std::priority_queue<vertex_sig, vertex_sig_vec, comparator> Q;
+    //std::priority_queue<vertex_sig, vertex_sig_vec, comparator> Q;
+    comparator2 cmp(dist_);
+    std::set<vertex_sig, comparator2> Q(cmp);
     std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>  prev_;
     std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig> goals;
     begin = clock();
