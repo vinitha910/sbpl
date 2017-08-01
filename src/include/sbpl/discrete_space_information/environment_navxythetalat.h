@@ -86,31 +86,6 @@ class hash_vertex_sig {
 typedef std::unordered_map<std::pair<int, std::vector<int> >, int, hash_vertex_sig> VertexCostMap;
 static VertexCostMap dist_;
 
-// For dijkstra's priority queue
-struct comparator {
-  bool operator()(const std::pair<int,std::vector<int> >& v1,
-		  const std::pair<int,std::vector<int> >& v2) const {
-    return(dist_[v1] <= dist_[v2]);
-  }
-};
-
-class comparator2 {
- public:
- comparator2(VertexCostMap& dist):dist_map_(dist) {}
-    bool operator()(const std::pair<int,std::vector<int> >& v1,
-		  const std::pair<int,std::vector<int> >& v2) const {
-
-      /* std::cout << "comparing vertex ids: " << v1.first <<" and " <<v2.first */
-      /* 		<<"     with costs "<< dist_[v1] << " " << dist_[v2] <<"     with costs "<< dist_map_[v1] << " " << dist_map_[v2] << std::endl; */
-  
-
-      return(dist_[v1] <= dist_[v2]);
-  }
-
- private:
-    VertexCostMap& dist_map_;
-};
-
 struct EnvNAVXYTHETALATAction_t
 {
     unsigned char aind; //index of the action (unique for given starttheta)
@@ -764,8 +739,37 @@ public:
 			   std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
 			   std::vector<int>& succ_sig);
 
+    class comparator {
+    public:
+    comparator(VertexCostMap& dist,
+	       EnvironmentNAVXYTHETALAT& env,
+	       int& gx,
+	       int& gy):dist_map_(dist), env_(env), gx_(gx), gy_(gy){}
+      bool operator()(const std::pair<int,std::vector<int> >& v1,
+		      const std::pair<int,std::vector<int> >& v2) const {
+
+	int v1x, v1y, v1th, v2x, v2y, v2th;
+	env_.GetCoordFromState(v1.first, v1x, v1y, v1th);
+	env_.GetCoordFromState(v2.first, v2x, v2y, v2th);
+	
+	int v1_sqdist = ((gx_ - v1x) * (gx_ - v1x) + (gy_ - v1y) * (gy_ - v1y));
+	int v1_euc_dist = env_.EnvNAVXYTHETALATCfg.cellsize_m * sqrt((double)v1_sqdist);
+
+	int v2_sqdist = ((gx_ - v2x) * (gx_ - v2x) + (gy_ - v2y) * (gy_ - v2y));
+	int v2_euc_dist = env_.EnvNAVXYTHETALATCfg.cellsize_m * sqrt((double)v2_sqdist);
+
+	return(dist_[v1] + v1_euc_dist <= dist_[v2] + v2_euc_dist);
+      }
+
+    private:
+      VertexCostMap& dist_map_;
+      EnvironmentNAVXYTHETALAT& env_;
+      int& gx_;
+      int& gy_;
+    };
+    
     virtual void HBSP
-      (std::set<vertex_sig, comparator2>& Q,
+      (std::set<vertex_sig, comparator>& Q,
        std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>& prev_,
        std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,
        bool sig_restricted_succ,

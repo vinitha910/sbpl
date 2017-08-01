@@ -129,27 +129,24 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
 	
     // specify a start and goal state
     int start_id, goal_id;
-    //setEnvStartGoal(env, .11, .11, 0, 35, 47.5, 0, start_id, goal_id);
-
+    
     //ENV 1
     //setEnvStartGoal(env, 0.325, 0.125, 0, 0.025, 0, 0, start_id, goal_id);
 
     //ENV 5
     //setEnvStartGoal(env, 0.4, 0.3, 0, 0.025, 0.025, 0, start_id, goal_id);
-    //setEnvStartGoal(env, .15, .15, 0, 0, 0., 0, start_id, goal_id);
 
     //ENV 6
     setEnvStartGoal(env, 1.375, 0.575, 0.025, 0.025, 0, 0, start_id, goal_id);
+
     static clock_t end = clock();
     double elapsed_time = (double(end-begin)/CLOCKS_PER_SEC);
     planning_time += elapsed_time;
     std::cout << "Time to Initialize Environment: "<< elapsed_time <<" s"<< std::endl;
-    
-    // int x, y, th;
-    // env.GetCoordFromState(goal_id, x, y, th);
-    // std::cout << "goal x:  " << x << " y: " << y << std::endl;
-    // env.GetCoordFromState(start_id, x, y, th);
-    // std::cout << "start x:  " << x << " y: " << y << std::endl;
+
+    // For MHA* goal
+    int gx, gy, gth;
+    env.GetCoordFromState(start_id, gx, gy, gth);
 
     std::unordered_map<std::pair<int,int>, int, EnvironmentNAVXYTHETALAT::pair_hash > obs_map;
     int obs_num = 0;
@@ -175,7 +172,7 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
       std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
 
     //std::vector<std::vector<int> > S = {{-3,-1},{-3}};
-    std::vector<std::vector<int> > S = {{},{-2},{-4,-2},{-4,-3,-2}};
+    std::vector<std::vector<int> > S = {{-5,-4,-3,-2}};
     //std::vector<std::vector<int> > S = {{-2},{-6,-5,-4,-1,-3,-2},{-5,-1,-2}};
     //std::vector<std::vector<int> > S = {{-2}};
     std::unordered_set<std::vector<int>, EnvironmentNAVXYTHETALAT::vector_hash> suffixes;
@@ -194,8 +191,9 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     // }
     
     //std::priority_queue<vertex_sig, vertex_sig_vec, comparator> Q;
-    comparator2 cmp(dist_);
-    std::set<vertex_sig, comparator2> Q(cmp);
+    EnvironmentNAVXYTHETALAT::comparator cmp(dist_, env, gx, gy);
+    // The start_id for backward's A* is the goal_id for MHA*
+    std::set<vertex_sig, EnvironmentNAVXYTHETALAT::comparator> Q(cmp);
     std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>  prev_;
     std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig> goals;
     begin = clock();
@@ -232,18 +230,18 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     HomotopicBasedHeuristic hanchor(&env, &S);
     HomotopicBasedHeuristic h1(&env, &S);
     HomotopicBasedHeuristic h2(&env, &S);
-    HomotopicBasedHeuristic h3(&env, &S);
-    HomotopicBasedHeuristic h4(&env, &S);
+    //HomotopicBasedHeuristic h3(&env, &S);
+    //HomotopicBasedHeuristic h4(&env, &S);
 
-    HomotopicBasedHeuristic* heurs[3];
+    HomotopicBasedHeuristic* heurs[2];
     heurs[0] = &h1;
     heurs[1] = &h2;
-    heurs[2] = &h3;
-    heurs[3] = &h4;
+    //heurs[2] = &h3;
+    //heurs[3] = &h4;
 
     begin = clock();
     initializePlanner(planner, env, S, centroids, start_id, goal_id, initialEpsilon, 
-    		      bsearchuntilfirstsolution, hanchor, heurs, 4);
+    		      bsearchuntilfirstsolution, hanchor, heurs, 2);
     
     // plan
     double allocated_time_secs = 10.0; // in seconds
