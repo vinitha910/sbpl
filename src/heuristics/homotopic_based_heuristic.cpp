@@ -36,11 +36,12 @@ HomotopicBasedHeuristic::HomotopicBasedHeuristic(EnvironmentNAVXYTHETALAT* envir
 						 std::vector<std::vector<int> >* S) 
 {
   S_ = S;
-  env_ = new EnvironmentNAVXYTHETALAT;
-  *env_ = *environment;
+  env_ = environment;
 }
 
-int HomotopicBasedHeuristic::GetGoalHeuristic(int& hidx, int& state_id, std::vector<int>& sig)
+int HomotopicBasedHeuristic::GetGoalHeuristic(int& hidx,
+					      int& state_id,
+					      std::vector<int>& sig)
 {
   // std::cout << hidx << std::endl;
   // std::vector<int> Signature = S_->at(hidx);
@@ -60,6 +61,6 @@ int HomotopicBasedHeuristic::GetGoalHeuristic(int& hidx, int& state_id, std::vec
     if(hidx == 0){
       return env_->GetGoalHeuristic(state_id);
     } else {
-      return env_->GetHBSPCost(v);
+      return env_->GetHBSPCost(v, *env_);
     }
 }

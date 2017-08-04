@@ -84,7 +84,6 @@ class hash_vertex_sig {
 // key: (q,s), value: distance to (q,s)/g value
 
 typedef std::unordered_map<std::pair<int, std::vector<int> >, int, hash_vertex_sig> VertexCostMap;
-static VertexCostMap dist_;
 
 struct EnvNAVXYTHETALATAction_t
 {
@@ -563,7 +562,8 @@ public:
     {
         HashTableSize = 0;
         Coord2StateIDHashTable = NULL;
-        Coord2StateIDHashTable_lookup = NULL;
+        Coord2StateIDHashTable_lookup = NULL;	
+	Q_ = NULL;
     }
 
     ~EnvironmentNAVXYTHETALAT();
@@ -739,55 +739,65 @@ public:
 			   std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
 			   std::vector<int>& succ_sig);
 
+    static VertexCostMap dist_;
+    
     class comparator {
     public:
-    comparator(VertexCostMap& dist,
-	       EnvironmentNAVXYTHETALAT& env,
+    comparator(EnvironmentNAVXYTHETALAT& env,
 	       int& gx,
-	       int& gy):dist_map_(dist), env_(env), gx_(gx), gy_(gy){}
+	       int& gy):env_(env), gx_(gx), gy_(gy){}
       bool operator()(const std::pair<int,std::vector<int> >& v1,
 		      const std::pair<int,std::vector<int> >& v2) const {
 
-	int v1x, v1y, v1th, v2x, v2y, v2th;
-	env_.GetCoordFromState(v1.first, v1x, v1y, v1th);
-	env_.GetCoordFromState(v2.first, v2x, v2y, v2th);
+	/* int v1x, v1y, v1th, v2x, v2y, v2th; */
+	/* env_.GetCoordFromState(v1.first, v1x, v1y, v1th); */
+	/* env_.GetCoordFromState(v2.first, v2x, v2y, v2th); */
 	
-	int v1_sqdist = ((gx_ - v1x) * (gx_ - v1x) + (gy_ - v1y) * (gy_ - v1y));
-	int v1_euc_dist = env_.EnvNAVXYTHETALATCfg.cellsize_m * sqrt((double)v1_sqdist);
+	/* int v1_sqdist = ((gx_ - v1x) * (gx_ - v1x) + (gy_ - v1y) * (gy_ - v1y)); */
+	/* int v1_euc_dist = env_.EnvNAVXYTHETALATCfg.cellsize_m * sqrt((double)v1_sqdist); */
 
-	int v2_sqdist = ((gx_ - v2x) * (gx_ - v2x) + (gy_ - v2y) * (gy_ - v2y));
-	int v2_euc_dist = env_.EnvNAVXYTHETALATCfg.cellsize_m * sqrt((double)v2_sqdist);
+	/* int v2_sqdist = ((gx_ - v2x) * (gx_ - v2x) + (gy_ - v2y) * (gy_ - v2y)); */
+	/* int v2_euc_dist = env_.EnvNAVXYTHETALATCfg.cellsize_m * sqrt((double)v2_sqdist); */
 
-	return(dist_[v1] + v1_euc_dist <= dist_[v2] + v2_euc_dist);
+	return dist_.at(v1) <= dist_.at(v2);
       }
 
     private:
-      VertexCostMap& dist_map_;
       EnvironmentNAVXYTHETALAT& env_;
       int& gx_;
       int& gy_;
     };
+
+    std::set<vertex_sig, comparator>* Q_;
+    std::map<std::pair<int,int>, int, centroid_comparator> centroids_;
+    std::vector<std::vector<int> > S_;	  
+    std::unordered_set<std::vector<int>, vector_hash> suffixes_;
+
+    typedef std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig> PrevNodes;
+    typedef std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig> GoalSet;
     
-    virtual void HBSP
-      (std::set<vertex_sig, comparator>& Q,
-       std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>& prev_,
-       std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,
+    virtual int HBSP
+      (EnvironmentNAVXYTHETALAT& env,
+       PrevNodes& prev_,
+       GoalSet& goals,
+       std::set<vertex_sig, comparator>& Q,
        bool sig_restricted_succ,
        std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
        std::vector<std::vector<int> >& S,
        std::unordered_set<std::vector<int>, vector_hash>& suffixes,
-       EnvironmentNAVXYTHETALAT& env,
-       int start_id, 
-       int end_id);
+       int end_id, 
+       int start_id = -1);
 
     virtual void GetHBSPPaths
       (std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,
        std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>& prev_,
        std::unordered_map<std::pair<int, std::vector<int> >, std::vector<std::pair<int, std::vector<int> > >, hash_vertex_sig>& paths_);
 
-    virtual int GetHBSPCost(std::pair<int, std::vector<int> > v);
+    virtual int GetHBSPCost(std::pair<int, std::vector<int> >& v,
+			    EnvironmentNAVXYTHETALAT& env);
 
     virtual int GetEuclideanDistToGoal(int& state_id);
+    
 protected:
     //hash table of size x_size*y_size. Maps from coords to stateId
     int HashTableSize;
@@ -811,6 +821,7 @@ protected:
     virtual void InitializeEnvironment();
 
     virtual void PrintHashTableHist(FILE* fOut);
-};
 
+};
+  
 #endif

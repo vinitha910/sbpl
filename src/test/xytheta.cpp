@@ -133,6 +133,9 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     //ENV 1
     //setEnvStartGoal(env, 0.325, 0.125, 0, 0.025, 0, 0, start_id, goal_id);
 
+    //ENV 4
+    //setEnvStartGoal(env, 0.15, 0.15, 0, 0, 0, 0, start_id, goal_id);
+    
     //ENV 5
     //setEnvStartGoal(env, 0.4, 0.3, 0, 0.025, 0.025, 0, start_id, goal_id);
 
@@ -168,13 +171,13 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     planning_time += elapsed_time;
     std::cout << "Time to Find Centroids: " << elapsed_time <<" s"<< std::endl;
     
-    for (auto& x: centroids)
-      std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
+    // for (auto& x: centroids)
+    //   std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
 
     //std::vector<std::vector<int> > S = {{-3,-1},{-3}};
-    std::vector<std::vector<int> > S = {{-5,-4,-3,-2}};
+    std::vector<std::vector<int> > S = {{},{-2}};//{-5,-4,-3,-2}
     //std::vector<std::vector<int> > S = {{-2},{-6,-5,-4,-1,-3,-2},{-5,-1,-2}};
-    //std::vector<std::vector<int> > S = {{-2}};
+    //std::vector<std::vector<int> > S = {{-2,-1}};
     std::unordered_set<std::vector<int>, EnvironmentNAVXYTHETALAT::vector_hash> suffixes;
     begin = clock(); 
     env.Suffixes(S, suffixes);
@@ -190,14 +193,13 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     //   std::cout << std::endl;
     // }
     
-    //std::priority_queue<vertex_sig, vertex_sig_vec, comparator> Q;
-    EnvironmentNAVXYTHETALAT::comparator cmp(dist_, env, gx, gy);
+    EnvironmentNAVXYTHETALAT::comparator cmp(env, gx, gy);
     // The start_id for backward's A* is the goal_id for MHA*
     std::set<vertex_sig, EnvironmentNAVXYTHETALAT::comparator> Q(cmp);
     std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>  prev_;
     std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig> goals;
     begin = clock();
-    env.HBSP(Q, prev_, goals, true, centroids, S, suffixes, env, start_id, goal_id);
+    env.HBSP(env, prev_, goals, Q, true, centroids, S, suffixes, goal_id, start_id);
     end = clock();
     elapsed_time = (double(end-begin)/CLOCKS_PER_SEC);
     planning_time += elapsed_time;
@@ -252,7 +254,7 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
 
     //write out solutions
     std::string filename("sol_deadly.txt");
-    writeSolution(env, solution_stateIDs, filename.c_str());
+    //writeSolution(env, solution_stateIDs, filename.c_str());
 
     end = clock();
     elapsed_time = (double(end-begin)/CLOCKS_PER_SEC);
