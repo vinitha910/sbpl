@@ -140,8 +140,11 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     //setEnvStartGoal(env, 0.4, 0.3, 0, 0.025, 0.025, 0, start_id, goal_id);
 
     //ENV 6
-    setEnvStartGoal(env, 1.375, 0.575, 0.025, 0.025, 0, 0, start_id, goal_id);
+    //setEnvStartGoal(env, 1.375, 0.575, 0.025, 0.025, 0, 0, start_id, goal_id);
 
+    //ENV 7
+    setEnvStartGoal(env, 1.375, 0.175, 0, 0.05, 0.375, 0, start_id, goal_id);
+    
     static clock_t end = clock();
     double elapsed_time = (double(end-begin)/CLOCKS_PER_SEC);
     planning_time += elapsed_time;
@@ -175,9 +178,11 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     //   std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
 
     //std::vector<std::vector<int> > S = {{-3}, {-3,-1}};
-    std::vector<std::vector<int> > S = {{-4,-2},{-2}};//{-5,-4,-3,-2}
+    //std::vector<std::vector<int> > S = {{-5,-3},{-3}};//{-5,-4,-3,-2}
     //std::vector<std::vector<int> > S = {{-2},{-6,-5,-4,-1,-3,-2},{-5,-1,-2}};
     //std::vector<std::vector<int> > S = {{-2,-1}};
+    std::vector<std::vector<int> > S = {{}};
+    
     std::unordered_set<std::vector<int>, EnvironmentNAVXYTHETALAT::vector_hash> suffixes;
     begin = clock(); 
     env.Suffixes(S, suffixes);
@@ -232,19 +237,19 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     
     HomotopicBasedHeuristic hanchor(&env, &S);
     HomotopicBasedHeuristic h1(&env, &S);
-    HomotopicBasedHeuristic h2(&env, &S);
+    //HomotopicBasedHeuristic h2(&env, &S);
     //HomotopicBasedHeuristic h3(&env, &S);
     //HomotopicBasedHeuristic h4(&env, &S);
 
-    HomotopicBasedHeuristic* heurs[2];
+    HomotopicBasedHeuristic* heurs[1];
     heurs[0] = &h1;
-    heurs[1] = &h2;
+    //heurs[1] = &h2;
     //heurs[2] = &h3;
     //heurs[3] = &h4;
 
     begin = clock();
     initializePlanner(planner, env, S, centroids, goal_id, start_id, initialEpsilon, 
-    		      bsearchuntilfirstsolution, hanchor, heurs, 2);
+    		      bsearchuntilfirstsolution, hanchor, heurs, 1);
     
     // plan
     double allocated_time_secs = 10.0; // in seconds
@@ -254,7 +259,7 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
 
     //write out solutions
     std::string filename("sol_deadly.txt");
-    //writeSolution(env, solution_stateIDs, filename.c_str());
+    writeSolution(env, solution_stateIDs, filename.c_str());
 
     end = clock();
     elapsed_time = (double(end-begin)/CLOCKS_PER_SEC);
