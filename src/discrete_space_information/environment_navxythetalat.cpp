@@ -37,6 +37,9 @@
 #include <sbpl/utils/mdpconfig.h>
 #include <assert.h>
 #include <iostream>
+#include <functional>
+#include <algorithm>
+#include <limits>
 
 #if TIME_DEBUG
 static clock_t time3_addallout = 0;
@@ -2771,7 +2774,6 @@ void EnvironmentNAVXYTHETALAT::GetSuccs(
 #if TIME_DEBUG
     clock_t currenttime = clock();
 #endif
-
     // clear the successor array
     SuccIDV->clear();
     CostV->clear();
@@ -3519,35 +3521,46 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
 
   std::map<std::pair<int,int>, int, centroid_comparator>::iterator iter_low,iter_high;
   int x_low, x_high, y_low, y_high;
-  if (ux < vx)
-    {
+  std::vector<int> added_signature;
+  if (ux < vx) {
       x_low = ux;
       x_high= vx;
       y_low = uy;
       y_high = vy;
-    }
-  else
-    {
+
+      iter_low = centroids.lower_bound(std::make_pair(x_low, y_low));
+      iter_high = centroids.upper_bound(std::make_pair(x_high, y_high));
+
+      //collect signatures crossed from left to right
+  
+      for(auto iter = iter_low; iter != iter_high; ++iter) {
+	beam = iter->second;
+	std::pair<int,int> beam_coor = iter->first; 
+	if(x_high >= beam_coor.first && y_high < beam_coor.second &&
+	   x_low < beam_coor.first) {
+	  added_signature.push_back(beam);
+	}
+      }
+  } else {
       x_low = vx;
       x_high= ux;
       y_low = vy;
       y_high = uy;
-    }
 
-  iter_low = centroids.lower_bound(std::make_pair(x_low, y_low));
-  iter_high = centroids.upper_bound(std::make_pair(x_high, y_high));
+      iter_low = centroids.lower_bound(std::make_pair(x_low, y_low));
+      iter_high = centroids.upper_bound(std::make_pair(x_high, y_high));
 
-  //collect signatures crossed from left to right
-  std::vector<int> added_signature;
-  for(auto iter = iter_low; iter != iter_high; ++iter)
-  {
-    beam = iter->second;
-    std::pair<int,int> beam_coor = iter->first; 
-    if(x_high >= beam_coor.first && y_high < beam_coor.second &&
-       x_low < beam_coor.first) {
-      added_signature.push_back(beam);
+      //collect signatures crossed from left to right
+      for(auto iter = iter_low; iter != iter_high; ++iter)
+	{
+	  beam = iter->second;
+	  std::pair<int,int> beam_coor = iter->first; 
+	  if(x_high > beam_coor.first && y_high < beam_coor.second &&
+	     x_low <= beam_coor.first) {
+	    added_signature.push_back(beam);
+	  }
+	}
     }
-  }
 
   succ_sig.assign(u.second.begin(), u.second.end());
   //update succ_sig
@@ -3575,7 +3588,7 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
     }    
 }
 
-VertexCostMap EnvironmentNAVXYTHETALAT::dist_ = {};
+VertexCostMap EnvironmentNAVXYTHETALAT::HBSP_dist_ = {};
 
 int EnvironmentNAVXYTHETALAT::HBSP(
 	   EnvironmentNAVXYTHETALAT& env,
@@ -3587,12 +3600,15 @@ int EnvironmentNAVXYTHETALAT::HBSP(
            std::vector<std::vector<int> >& S,	  
            std::unordered_set<std::vector<int>, vector_hash>& suffixes,
 	   int end_id,
-	   int start_id) {
+	   int start_id,
+	   VertexCostMap& dist_) {
 
   if(Q.empty()) {
-    EnvironmentNAVXYTHETALAT::centroids_ = centroids;
-    EnvironmentNAVXYTHETALAT::S_ = S;
-    EnvironmentNAVXYTHETALAT::suffixes_ = suffixes;
+    if(sig_restricted_succ) {
+      EnvironmentNAVXYTHETALAT::centroids_ = centroids;
+      EnvironmentNAVXYTHETALAT::S_ = S;
+      EnvironmentNAVXYTHETALAT::suffixes_ = suffixes;
+    }
     std::vector<int> sig;
     std::pair<int, std::vector<int> > init_v(start_id, sig);
     dist_.insert(std::make_pair(init_v, 0));
@@ -3603,22 +3619,15 @@ int EnvironmentNAVXYTHETALAT::HBSP(
   std::vector<int> succ_ids;
   std::vector<int> costs;
   std::vector<int> succ_sig;
+  // std::vector<std::vector<int> > dist_matrix;
+  // dist_matrix.resize(15, std::vector<int>(15, 999));
+  // int x,y,th;
+  // GetCoordFromState(start_id,x,y,th);
+  //dist_matrix[x][y] = 0;
+
   while(!Q.empty()) {
-    // if(!sig_restricted_succ && c < 5) {
-       int x, y, th;
-    //   for(auto& pq: Q) {
-    // 	GetCoordFromState(pq.first, x, y, th);
-    // 	std::cout << "PQ: (" << x << " ," << y << ")" << " DIST: " << dist_.at(pq) << std::endl;
-    //   }
-    // }
     std::pair<int, std::vector<int> > u = *(Q.begin());
-    // if(!sig_restricted_succ) {
-    // GetCoordFromState(u.first, x, y, th);
-    // std::cout << "U: " << "(" << x << " ," << y << ")" << " SIG: {";
-    // for(auto& s: u.second)
-    //   std::cout << s << " ";
-    // std::cout << "} " << "CTC: " << dist_.at(u) << std::endl;
-    // }
+
     Q.erase(Q.begin());
     succ_ids.clear();
     costs.clear();
@@ -3626,76 +3635,96 @@ int EnvironmentNAVXYTHETALAT::HBSP(
     env.GetSuccs(u.first, &succ_ids, &costs);
     assert(succ_ids.size() == costs.size());
 
-    // if(c < 3){
-    // int x, y, th;
-    // GetCoordFromState(u.first, x, y, th);
-    // std::cout << "PQ: " << u.first << " -> " << x << " " << y << std::endl;
-    // std::cout << "DIST: " << dist_[u] << std::endl;
-    // // for(auto& s:succ_ids){
-    // //   GetCoordFromState(s, x, y, th);
-    // //   std::cout << "SUCC: " << s << " -> " << x << " " << y << std::endl;
-    // // }
-    // }
-    // c++;
-
-    int dist_u = dist_.at(u);    
+    int dist_u = dist_.at(u);
     for (int sidx = 0; sidx < succ_ids.size(); ++sidx) {
+      succ_sig.clear();
       Signature(u, succ_ids[sidx], env, centroids, succ_sig);
-
       // If the current siguature not in set of suffixes
-      if(sig_restricted_succ && !succ_sig.empty() &&
+      if(!succ_sig.empty() &&
 	 suffixes.count(succ_sig) == 0) { 
 	succ_sig.clear();
       	continue;
-      } else if (!sig_restricted_succ && !succ_sig.empty()) {
-	std::vector<int> tmp (succ_sig);
-	std::sort(tmp.begin(), tmp.end()); 
-	auto it = std::adjacent_find (tmp.begin(), tmp.end());
-	if (it!= tmp.end())
-	  continue;
-      }
-    
+      } // else if (!sig_restricted_succ && !succ_sig.empty()) {
+      // 	std::vector<int> tmp (succ_sig);
+      // 	for(int i = 0; i < tmp.size(); ++i) {
+      // 	  if(tmp.at(i) < 0) tmp[i] *= -1;
+      // 	}
+      // 	std::sort(tmp.begin(), tmp.end()); 
+      // 	auto it = std::adjacent_find (tmp.begin(), tmp.end());
+      // 	if (it!= tmp.end()) {
+      // 	  succ_sig.clear();
+      // 	  continue;
+      // 	}
+      // }
+
       int alt = dist_u + costs[sidx];
       std::pair<int, std::vector<int> > curr_vertex(succ_ids[sidx], succ_sig);
-
+      // std::cout << "succ_id: " << succ_ids[sidx] << " sig: ";
+      // for(auto& x:succ_sig)
+      // 	std::cout << x << " ";
+      // std::cout << std::endl;
+      
       // Check if current vertex was explored, i.e. if dist is specified
+      
       auto dist_curr = dist_.find(curr_vertex);
       if(dist_curr == dist_.end() || alt < dist_curr->second) {
-	dist_[curr_vertex] = alt;
-	if(prev_.count(curr_vertex) > 0){
-	  prev_.at(curr_vertex) = u;
-	} else {
-	  prev_.insert(std::make_pair(curr_vertex,u));
-	}
-	// GetCoordFromState(succ_ids[sidx], x, y, th);
-	// std:: cout << "    SUCC: " << "(" << x << ", " << y << ")" << " SIG: {";
-	// for(auto& s: succ_sig)
-	//   std::cout << s << " ";
-	// std::cout << "} " << "CTC: " << dist_.at(curr_vertex) << std::endl;
+	dist_.insert(std::make_pair(curr_vertex, alt));
+	
+	// if(succ_sig.empty() || succ_sig.front() == -3) {
+	//   int x,y,th;
+	//   GetCoordFromState(curr_vertex.first,x,y,th);
+	//   if(dist_matrix[x][y] > alt)
+	//     dist_matrix[x][y] = alt;
+	// }
+
+	// if(prev_.count(curr_vertex) > 0){
+	//   prev_.at(curr_vertex) = u;
+	// } else {
+	//   prev_.insert(std::make_pair(curr_vertex,u));
+	// }
+
+	// std::cout << "curr_vertex: " << curr_vertex.first << " sig: {";
+	//   for(auto& s: curr_vertex.second)
+	//     std::cout << s << " ";
+	//   std::cout << "}" << std::endl;
+	  
+	// std::cout << "Q size: " << Q.size() << std::endl;
+	// for(auto& q:Q){
+	//   std::cout << "id: " << q.first << " sig: {";
+	//   for(auto& s: q.second)
+	//     std::cout << s << " ";
+	//   std::cout << "}" << std::endl;
+	// }
 	auto it = Q.find(curr_vertex);
 	if(it != Q.end()) {
 	  Q.erase(it);
 	}
 	Q.insert(curr_vertex);
 	
-	if(sig_restricted_succ && goals.count(curr_vertex) > 0) {
+	if(goals.count(curr_vertex) > 0) {
 	  goals.erase(curr_vertex);
 	  if(goals.empty()) {
-	    // for(auto& pq: Q) {
-	    //   GetCoordFromState(pq.first, x, y, th);
-	    //   std::cout << "PQ: (" << x << " ," << y << ")" << " DIST: " << dist_.at(pq) << std::endl;
-	    // }
 	    EnvironmentNAVXYTHETALAT::Q_ = &Q;
-	    std::cout << "Q size: " << EnvironmentNAVXYTHETALAT::Q_->size() << std::endl;
-	    return 0;
+	    //std::cout << "Q size: " << EnvironmentNAVXYTHETALAT::Q_->size() << std::endl;
+	    return dist_.at(curr_vertex);
 	  }
-	} else if(!sig_restricted_succ && curr_vertex.first == end_id) {
-	  return alt;
 	}
       }
     }
   }
-  return 0;
+
+  // std::cout << "[";
+  // 	    for(int i = 0; i < 14; ++i) {
+  // 	      std::cout << "[";
+  // 	      for(int j = 0; j < 14; ++j) {
+  // 		std::cout << dist_matrix[j][i] << ", ";
+  // 	      }
+  // 	      std::cout << "],";
+  // 	      std::cout << std::endl;
+  // 	    }
+  // 	    std::cout << "]";
+  // }
+  return std::numeric_limits<int>::max();
 }
 
 void EnvironmentNAVXYTHETALAT::GetHBSPPaths(
@@ -3721,18 +3750,78 @@ void EnvironmentNAVXYTHETALAT::GetHBSPPaths(
   }
 }
 
-int EnvironmentNAVXYTHETALAT::GetHBSPCost(std::pair<int, std::vector<int> >& v,
+int EnvironmentNAVXYTHETALAT::GetHBSPCost(int& hidx,
+					  std::pair<int, std::vector<int> >& v,
 					  EnvironmentNAVXYTHETALAT& env){
-  if(dist_.count(v) > 0){
+
+  std::vector<int> desired_sig = S_.at(hidx-1);
+  
+  int x, y, th;
+  GetCoordFromState(v.first, x, y, th);
+  // std::cout << v.first << ": (" << x << ", " << y << ") -> ";
+  // std::cout << "DESIRED: {";
+  // for(auto& ds: desired_sig)
+  //   std::cout << ds << " ";
+  // std::cout << "} + ";
+  // std::cout << "CURRENT: {";
+  // for(auto& s: v.second)
+  //   std::cout << s << " ";
+  // std::cout << "} = ";
+
+  if(v.first == EnvNAVXYTHETALAT.startstateid) {
+    //std::cout << std::endl;
+    return HBSP_dist_.at(std::make_pair(EnvNAVXYTHETALAT.goalstateid, desired_sig));
+  } else if(v.first == EnvNAVXYTHETALAT.goalstateid) {
+    //std::cout << std::endl;
+    return 0;
+  }
+  
+  bool overlap = true;
+  while(overlap && !v.second.empty() && !desired_sig.empty()) {
+    if(desired_sig.back() == v.second.front() ||
+       desired_sig.back() == -1 * v.second.front()) {
+      desired_sig.pop_back();
+      v.second.erase(v.second.begin());
+    } else {
+      overlap = false;
+    }
+  }
+  if(desired_sig.empty() && !v.second.empty()) {
+    std::transform (v.second.begin(), v.second.end(), v.second.begin(), std::negate<int>());
+    desired_sig.insert(desired_sig.end(), v.second.rbegin(), v.second.rend());;
+  }else {
+    desired_sig.insert(desired_sig.end(), v.second.begin(), v.second.end());
+  }
+  // std::cout << "{";
+  // for(auto& ds: desired_sig)
+  //   std::cout << ds << " ";
+  // std::cout << "}"<< std::endl;
+  std::pair<int, std::vector<int> >v_inverse(v.first, desired_sig);
+
+  if(HBSP_dist_.count(v_inverse) > 0){
     // std::cout << "(" << v.first << ", ";
     // for(auto& x: v.second)
     //   std::cout << x << " ";
     // std::cout << ")" << std::endl;
-    return dist_.at(v);
+    return HBSP_dist_.at(v_inverse);
   }
+
+  
+  VertexCostMap dist = {};
+  EnvironmentNAVXYTHETALAT::comparator cmp(dist,
+					   env,
+					   EnvNAVXYTHETALATCfg.EndX_c,
+					   EnvNAVXYTHETALATCfg.EndY_c);
+  std::set<vertex_sig, EnvironmentNAVXYTHETALAT::comparator> Q(cmp);
   PrevNodes prev;
   GoalSet goals;
-  return HBSP(env, prev, goals, *Q_, false, centroids_, S_, suffixes_, v.first);
+  std::vector<std::vector<int> > S;
+  std::unordered_set<std::vector<int>, vector_hash> suffixes;
+
+  S.push_back(desired_sig);
+  env.Suffixes(S, suffixes);
+  
+  return HBSP(env, prev, goals, Q, false, centroids_, S, suffixes, v.first, EnvNAVXYTHETALAT.startstateid, dist);
 }
 
 int EnvironmentNAVXYTHETALAT::GetEuclideanDistToGoal(int& state_id) {

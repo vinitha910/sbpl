@@ -43,24 +43,11 @@ int HomotopicBasedHeuristic::GetGoalHeuristic(int& hidx,
 					      int& state_id,
 					      std::vector<int>& sig)
 {
-  // std::cout << hidx << std::endl;
-  // std::vector<int> Signature = S_->at(hidx);
-  // std::cout << "Sig: " << S_->at(hidx).size() << std::endl;
-  // bool winding = true;
-  // while(winding && !Signature.empty() && !sig.empty()) {
-  //   if(Signature.back() == sig.front()) {
-  //     Signature.pop_back();
-  //     sig.erase(sig.begin());
-  //   }else{
-  //     winding = false;
-  //   }
-  // }
-
     std::pair<int, std::vector<int> > v = make_pair(state_id, sig);
     
     if(hidx == 0){
       return env_->GetGoalHeuristic(state_id);
     } else {
-      return env_->GetHBSPCost(v, *env_);
+      return env_->GetHBSPCost(hidx, v, *env_);
     }
 }

@@ -174,8 +174,8 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     // for (auto& x: centroids)
     //   std::cout << "(" << x.first.first << ", " << x.first.second << "): " << x.second << std::endl;
 
-    //std::vector<std::vector<int> > S = {{-3,-1},{-3}};
-    std::vector<std::vector<int> > S = {{},{-2}};//{-5,-4,-3,-2}
+    //std::vector<std::vector<int> > S = {{-3}, {-3,-1}};
+    std::vector<std::vector<int> > S = {{-4,-2},{-2}};//{-5,-4,-3,-2}
     //std::vector<std::vector<int> > S = {{-2},{-6,-5,-4,-1,-3,-2},{-5,-1,-2}};
     //std::vector<std::vector<int> > S = {{-2,-1}};
     std::unordered_set<std::vector<int>, EnvironmentNAVXYTHETALAT::vector_hash> suffixes;
@@ -193,13 +193,14 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     //   std::cout << std::endl;
     // }
     
-    EnvironmentNAVXYTHETALAT::comparator cmp(env, gx, gy);
+    EnvironmentNAVXYTHETALAT::comparator cmp(EnvironmentNAVXYTHETALAT::HBSP_dist_, env, gx, gy);
     // The start_id for backward's A* is the goal_id for MHA*
     std::set<vertex_sig, EnvironmentNAVXYTHETALAT::comparator> Q(cmp);
     std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>  prev_;
     std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig> goals;
     begin = clock();
-    env.HBSP(env, prev_, goals, Q, true, centroids, S, suffixes, goal_id, start_id);
+    env.HBSP(env, prev_, goals, Q, true, centroids, S, suffixes, goal_id, start_id, EnvironmentNAVXYTHETALAT::HBSP_dist_);
+    
     end = clock();
     elapsed_time = (double(end-begin)/CLOCKS_PER_SEC);
     planning_time += elapsed_time;
@@ -242,13 +243,12 @@ void planxythetalat(char* envCfgFilename, char* motPrimFilename){
     //heurs[3] = &h4;
 
     begin = clock();
-    initializePlanner(planner, env, S, centroids, start_id, goal_id, initialEpsilon, 
+    initializePlanner(planner, env, S, centroids, goal_id, start_id, initialEpsilon, 
     		      bsearchuntilfirstsolution, hanchor, heurs, 2);
     
     // plan
     double allocated_time_secs = 10.0; // in seconds
     runPlanner(planner, allocated_time_secs, solution_stateIDs);
-    
     //print stats
     env.PrintTimeStat(stdout);
 

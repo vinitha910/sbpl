@@ -37,6 +37,7 @@
 
 #include <sbpl/utils/key.h>
 #include <iostream>
+#include <limits>
 
 static double GetTime()
 {
@@ -644,7 +645,7 @@ void MHAPlanner::insert_or_update(MHASearchState* state, int hidx, int f)
     if (state->od[hidx].open_state.heapindex != 0) {
         m_open[hidx].updateheap(&state->od[hidx].open_state, new_key);
     }
-    else {
+    else if (state->od[hidx].h != std::numeric_limits<int>::max()) {
         m_open[hidx].insertheap(&state->od[hidx].open_state, new_key);
     }
 }
