@@ -33,6 +33,13 @@
 #include <cstdio>
 #include <vector>
 #include <sstream>
+#include <unordered_map>
+#include <map>
+#include <unordered_set>
+#include <algorithm>
+#include <queue>
+#include <stdlib.h>
+#include <iostream>
 
 #include <sbpl/discrete_space_information/environment.h>
 #include <sbpl/utils/utils.h>
@@ -43,7 +50,7 @@
 
 //eight-connected grid
 #define NAVXYTHETALAT_DXYWIDTH 8
-#define ENVNAVXYTHETALAT_DEFAULTOBSTHRESH 254	//see explanation of the value below
+#define ENVNAVXYTHETALAT_DEFAULTOBSTHRESH 254   //see explanation of the value below
 //maximum number of states for storing them into lookup (as opposed to hash)
 #define SBPL_XYTHETALAT_MAXSTATESFORLOOKUP 100000000
 //definition of theta orientations
@@ -59,6 +66,24 @@
 class CMDPSTATE;
 class MDPConfig;
 class SBPL2DGridSearch;
+
+typedef std::pair<int,std::vector<int> > vertex_sig;
+typedef std::vector<std::pair<int,std::vector<int> > > vertex_sig_vec;
+
+// Hashing function for vertex signature pair 
+class hash_vertex_sig {
+ public:
+  std::size_t operator()(const std::pair<int,std::vector<int> >& key) const {
+    return int_hash_(key.first);
+    //return 100000000*key.first + (key.second).size();
+  }
+ private:
+  std::hash<int> int_hash_;
+};
+
+// key: (q,s), value: distance to (q,s)/g value
+
+typedef std::unordered_map<std::pair<int, std::vector<int> >, int, hash_vertex_sig> VertexCostMap;
 
 struct EnvNAVXYTHETALATAction_t
 {
@@ -200,7 +225,7 @@ class EnvironmentNAVXYTHETALATTICE : public DiscreteSpaceInformation
 {
 public:
     EnvironmentNAVXYTHETALATTICE();
-
+      
     /**
      * \brief initialization of environment from file. See .cfg files for
      *        examples it also takes the perimeter of the robot with respect to some
@@ -456,7 +481,7 @@ public:
      * \brief prints environment variables for debugging
      */
     virtual void PrintVars() { }
-
+    
 protected:
     virtual int GetActionCost(int SourceX, int SourceY, int SourceTheta, EnvNAVXYTHETALATAction_t* action);
 
@@ -537,7 +562,8 @@ public:
     {
         HashTableSize = 0;
         Coord2StateIDHashTable = NULL;
-        Coord2StateIDHashTable_lookup = NULL;
+        Coord2StateIDHashTable_lookup = NULL;   
+    Q_ = NULL;
     }
 
     ~EnvironmentNAVXYTHETALAT();
@@ -660,6 +686,125 @@ public:
 
     const EnvNAVXYTHETALATHashEntry_t* GetStateEntry(int state_id) const;
 
+    struct pair_hash {
+      std::size_t operator()(const std::pair<int,int> & v) const {
+        return v.first*10000000000000000+v.second;
+      }
+    };
+
+    struct vector_hash {
+      std::size_t operator()(const std::vector<int>& v) const {
+        std::hash<int> hasher;
+        size_t seed = 0;
+        for (int i : v) {
+            seed ^= hasher(i) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+        }
+        return seed;
+      }
+    };
+
+    struct centroid_comparator {
+      bool operator()(const std::pair<int,int>& c1,
+              const std::pair<int,int>& c2) const {
+    return(c1.first < c2.first);
+      }
+    };
+    
+    // virtual void FindObsCells(std::unordered_set<std::pair<int,int>, pair_hash >& obs_cells);
+    virtual void CheckNeighbors(int x, 
+                int y,
+                int obs_num,
+                std::vector<std::vector<int> >& visited, 
+                std::vector<std::pair<int,int> >& n, 
+                std::unordered_map<std::pair<int,int>, int, pair_hash>& obs_map);
+    
+    virtual void CreateObsMap(std::unordered_map<std::pair<int,int>, int, pair_hash>& obs_map,
+                  int& obs_num);
+
+    virtual void FindCentroids(std::unordered_map<std::pair<int,int>, int, pair_hash> obs_map, 
+                   std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
+                   int obs_num);
+
+    virtual std::map<std::pair<int,int>, int, centroid_comparator>* GetCentroids();
+
+    // Creates an unordered set of all of the suffixes for the user-defined signature set
+    virtual void Suffixes(std::vector<std::vector<int> > S,
+              std::unordered_set<std::vector<int>, vector_hash>& suffixes);
+
+    virtual void CreateGoalSet(int end_id, 
+                   std::vector<std::vector<int> > S, 
+                   std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals);
+
+    virtual void Signature(std::pair<int, std::vector<int> > u,
+               int v_id,
+               EnvironmentNAVXYTHETALAT& env,
+               std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
+               std::vector<int>& succ_sig);
+
+    static VertexCostMap HBSP_dist_;
+    
+    class comparator {
+    public:
+    comparator(VertexCostMap& dist,
+           EnvironmentNAVXYTHETALAT& env,
+           int& gx,
+           int& gy):dist_(dist), env_(env), gx_(gx), gy_(gy){}
+      bool operator()(const std::pair<int,std::vector<int> >& v1,
+              const std::pair<int,std::vector<int> >& v2) const {
+
+    int v1x, v1y, v1th, v2x, v2y, v2th;
+    env_.GetCoordFromState(v1.first, v1x, v1y, v1th);
+    env_.GetCoordFromState(v2.first, v2x, v2y, v2th);
+    
+    int v1_sqdist = ((gx_ - v1x) * (gx_ - v1x) + (gy_ - v1y) * (gy_ - v1y));
+    int v1_euc_dist = env_.EnvNAVXYTHETALATCfg.cellsize_m * sqrt((double)v1_sqdist);
+
+    int v2_sqdist = ((gx_ - v2x) * (gx_ - v2x) + (gy_ - v2y) * (gy_ - v2y));
+    int v2_euc_dist = env_.EnvNAVXYTHETALATCfg.cellsize_m * sqrt((double)v2_sqdist);
+
+    return dist_.at(v1) <= dist_.at(v2);
+      }
+
+    private:
+      VertexCostMap& dist_;
+      EnvironmentNAVXYTHETALAT& env_;
+      int& gx_;
+      int& gy_;
+    };
+
+    std::set<vertex_sig, comparator>* Q_;
+    std::map<std::pair<int,int>, int, centroid_comparator> centroids_;
+    std::vector<std::vector<int> > S_;    
+    std::unordered_set<std::vector<int>, vector_hash> suffixes_;
+
+    typedef std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig> PrevNodes;
+    typedef std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig> GoalSet;
+    
+    virtual int HBSP
+      (EnvironmentNAVXYTHETALAT& env,
+       PrevNodes& prev_,
+       GoalSet& goals,
+       std::set<vertex_sig, comparator>& Q,
+       bool sig_restricted_succ,
+       std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
+       std::vector<std::vector<int> >& S,
+       std::unordered_set<std::vector<int>, vector_hash>& suffixes,
+       int end_id, 
+       int start_id,
+       VertexCostMap& dist_);
+
+    virtual void GetHBSPPaths
+      (std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,
+       std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>& prev_,
+       std::unordered_map<std::pair<int, std::vector<int> >, std::vector<std::pair<int, std::vector<int> > >, hash_vertex_sig>& paths_);
+
+    virtual int GetHBSPCost(int& hidx,
+                std::pair<int, std::vector<int> >& v,
+                EnvironmentNAVXYTHETALAT& env,
+                std::vector<int>& desired_sig);
+
+    virtual int GetEuclideanDistToGoal(int& state_id);
+    
 protected:
     //hash table of size x_size*y_size. Maps from coords to stateId
     int HashTableSize;
@@ -683,6 +828,7 @@ protected:
     virtual void InitializeEnvironment();
 
     virtual void PrintHashTableHist(FILE* fOut);
-};
 
+};
+  
 #endif
