@@ -563,7 +563,7 @@ public:
         HashTableSize = 0;
         Coord2StateIDHashTable = NULL;
         Coord2StateIDHashTable_lookup = NULL;   
-    Q_ = NULL;
+        Q_ = NULL;
     }
 
     ~EnvironmentNAVXYTHETALAT();
@@ -725,8 +725,6 @@ public:
                    std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
                    int obs_num);
 
-    virtual std::map<std::pair<int,int>, int, centroid_comparator>* GetCentroids();
-
     // Creates an unordered set of all of the suffixes for the user-defined signature set
     virtual void Suffixes(std::vector<std::vector<int> > S,
               std::unordered_set<std::vector<int>, vector_hash>& suffixes);
@@ -747,8 +745,8 @@ public:
     public:
     comparator(VertexCostMap& dist,
            EnvironmentNAVXYTHETALAT& env,
-           int& gx,
-           int& gy):dist_(dist), env_(env), gx_(gx), gy_(gy){}
+           int gx,
+           int gy):dist_(dist), env_(env), gx_(gx), gy_(gy){}
       bool operator()(const std::pair<int,std::vector<int> >& v1,
               const std::pair<int,std::vector<int> >& v2) const {
 
@@ -768,14 +766,20 @@ public:
     private:
       VertexCostMap& dist_;
       EnvironmentNAVXYTHETALAT& env_;
-      int& gx_;
-      int& gy_;
+      int gx_;
+      int gy_;
     };
 
     std::set<vertex_sig, comparator>* Q_;
     std::map<std::pair<int,int>, int, centroid_comparator> centroids_;
     std::vector<std::vector<int> > S_;    
     std::unordered_set<std::vector<int>, vector_hash> suffixes_;
+
+    std::set<vertex_sig, comparator>* GetQ() { return Q_; };
+
+    void SetQ(std::set<vertex_sig, comparator>* Q) { Q_ = Q; };
+
+    virtual std::map<std::pair<int,int>, int, centroid_comparator>* GetCentroids() { return &centroids_; }
 
     typedef std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig> PrevNodes;
     typedef std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig> GoalSet;
@@ -799,9 +803,8 @@ public:
        std::unordered_map<std::pair<int, std::vector<int> >, std::vector<std::pair<int, std::vector<int> > >, hash_vertex_sig>& paths_);
 
     virtual int GetHBSPCost(int& hidx,
-                std::pair<int, std::vector<int> >& v,
-                EnvironmentNAVXYTHETALAT& env,
-                std::vector<int>& desired_sig);
+                std::pair<int, std::vector<int> > v,
+                EnvironmentNAVXYTHETALAT& env);
 
     virtual int GetEuclideanDistToGoal(int& state_id);
     
