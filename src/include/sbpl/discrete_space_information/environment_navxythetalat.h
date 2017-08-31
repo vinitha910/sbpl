@@ -737,7 +737,8 @@ public:
                int v_id,
                EnvironmentNAVXYTHETALAT& env,
                std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
-               std::vector<int>& succ_sig);
+               std::vector<int>& succ_sig,
+               bool bipedal = false);
 
     static VertexCostMap HBSP_dist_;
     
@@ -772,6 +773,7 @@ public:
 
     std::set<vertex_sig, comparator>* Q_;
     std::map<std::pair<int,int>, int, centroid_comparator> centroids_;
+    std::map<std::pair<int,int>, int, centroid_comparator>* humanoid_centroids_;
     std::vector<std::vector<int> > S_;    
     std::unordered_set<std::vector<int>, vector_hash> suffixes_;
 
@@ -779,7 +781,11 @@ public:
 
     void SetQ(std::set<vertex_sig, comparator>* Q) { Q_ = Q; };
 
-    virtual std::map<std::pair<int,int>, int, centroid_comparator>* GetCentroids() { return &centroids_; }
+    void SetHumanoidEnvCentroids(std::map<std::pair<int,int>, int, centroid_comparator>* centroids) { humanoid_centroids_ = centroids; };
+
+    std::map<std::pair<int,int>, int, centroid_comparator>* GetCentroids() { return &centroids_; };
+
+    std::map<std::pair<int,int>, int, centroid_comparator>* GetHumanoidEnvCentroids() { return humanoid_centroids_; };
 
     typedef std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig> PrevNodes;
     typedef std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig> GoalSet;

@@ -3481,9 +3481,10 @@ void EnvironmentNAVXYTHETALAT::FindCentroids(std::unordered_map<std::pair<int,in
       if (beams.find(x.second) != beams.end()) {
       continue;
       } else {
-      centroids.insert(x);;
-      if(centroids.size() != beams.size())
-         beams.insert(x.second);
+        centroids.insert(x);
+      
+        if(centroids.size() != beams.size())
+            beams.insert(x.second);
       }
     }
   }
@@ -3512,7 +3513,8 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
                      int v_id,
                      EnvironmentNAVXYTHETALAT& env,
                      std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
-                     std::vector<int>& succ_sig) {
+                     std::vector<int>& succ_sig,
+                     bool bipedal) {
 
   int vx, vy, vtheta, ux, uy, utheta, beam;
   env.GetCoordFromState(v_id, vx, vy, vtheta); 
@@ -3534,12 +3536,12 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
       //collect signatures crossed from left to right
   
       for(auto iter = iter_low; iter != iter_high; ++iter) {
-    beam = iter->second;
-    std::pair<int,int> beam_coor = iter->first; 
-    if(x_high >= beam_coor.first && y_high < beam_coor.second &&
-       x_low < beam_coor.first) {
-      added_signature.push_back(beam);
-    }
+        beam = iter->second;
+        std::pair<int,int> beam_coor = iter->first; 
+        if(x_high >= beam_coor.first && y_high > beam_coor.second &&
+            x_low < beam_coor.first) {
+            added_signature.push_back(beam);
+        }
       }
   } else {
       x_low = vx;
@@ -3551,15 +3553,14 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
       iter_high = centroids.upper_bound(std::make_pair(x_high, y_high));
 
       //collect signatures crossed from left to right
-      for(auto iter = iter_low; iter != iter_high; ++iter)
-    {
-      beam = iter->second;
-      std::pair<int,int> beam_coor = iter->first; 
-      if(x_high > beam_coor.first && y_high < beam_coor.second &&
-         x_low <= beam_coor.first) {
-        added_signature.push_back(beam);
+      for(auto iter = iter_low; iter != iter_high; ++iter) {
+        beam = iter->second;
+        std::pair<int,int> beam_coor = iter->first; 
+        if(x_high > beam_coor.first && y_high > beam_coor.second &&
+            x_low <= beam_coor.first) {
+            added_signature.push_back(beam);
+        }
       }
-    }
     }
 
   succ_sig.assign(u.second.begin(), u.second.end());
