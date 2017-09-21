@@ -50,7 +50,7 @@ class ExampleApp(tk.Tk):
         self.x = event.x
         self.y = event.y
         l = self.canvas.create_line(self.previous_x, self.previous_y, 
-                                self.x, self.y,fill="yellow")
+                                self.x, self.y,fill="blue",width=3)
         self.path.append(l)
         self.points_recorded.append((self.previous_x, 500 - self.previous_y))
         self.points_recorded.append((self.x, 500 - self.y))       
