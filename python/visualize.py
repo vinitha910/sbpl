@@ -63,7 +63,7 @@ if __name__ == '__main__':
     (map_values, cell_size) = get_map(sys.argv[1])
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    plt.imshow(map_values, vmin=0, vmax=1)
+    plt.imshow(map_values, vmin=0, vmax=1, cmap='Greys')
     plt.ylim([0, map_values.shape[0]])
     plt.xlim([0, map_values.shape[1]])
  

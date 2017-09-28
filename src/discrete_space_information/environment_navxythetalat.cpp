@@ -3589,6 +3589,49 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
     }    
 }
 
+DijkstraCostMap EnvironmentNAVXYTHETALAT::dijkstra_dist_ = {};
+
+void EnvironmentNAVXYTHETALAT::Dijkstra(
+       EnvironmentNAVXYTHETALAT& env,
+       int start_id) {
+
+  EnvironmentNAVXYTHETALAT::dijkstra_comparator cmp(EnvironmentNAVXYTHETALAT::dijkstra_dist_, env);
+  std::set<int, dijkstra_comparator> Q = std::set<int, EnvironmentNAVXYTHETALAT::dijkstra_comparator>(cmp);  
+  dijkstra_dist_.insert(std::make_pair(start_id, 0));
+  Q.insert(start_id);
+
+  std::vector<int> succ_ids;
+  std::vector<int> costs;
+  int u;
+
+  while(!Q.empty()) {
+    u = *(Q.begin());
+    Q.erase(Q.begin());
+
+    succ_ids.clear();
+    costs.clear();
+    env.GetSuccs(u, &succ_ids, &costs);
+    assert(succ_ids.size() == costs.size());
+    
+    int dist_u = EnvironmentNAVXYTHETALAT::dijkstra_dist_.at(u);
+    for (int sidx = 0; sidx < succ_ids.size(); ++sidx) {
+      int alt = dist_u + costs[sidx];
+      int curr_vertex = succ_ids[sidx];
+
+      // Check if current vertex was explored, i.e. if dist is specified
+      auto dist_curr = EnvironmentNAVXYTHETALAT::dijkstra_dist_.find(curr_vertex);
+      if(dist_curr == EnvironmentNAVXYTHETALAT::dijkstra_dist_.end() || alt < dist_curr->second) {
+        EnvironmentNAVXYTHETALAT::dijkstra_dist_.insert(std::make_pair(curr_vertex, alt));
+
+        auto it = Q.find(curr_vertex);
+        if(it != Q.end()) {
+            Q.insert(curr_vertex);
+        } 
+      }
+    }
+  }
+}
+
 VertexCostMap EnvironmentNAVXYTHETALAT::HBSP_dist_ = {};
 
 int EnvironmentNAVXYTHETALAT::HBSP(
@@ -3704,7 +3747,7 @@ void EnvironmentNAVXYTHETALAT::GetHBSPPaths(
   }
 }
 
-int EnvironmentNAVXYTHETALAT::GetHBSPCost(int& hidx,
+int EnvironmentNAVXYTHETALAT::GetHBSPCost(int hidx,
                                           std::pair<int, std::vector<int> > v,
                                           EnvironmentNAVXYTHETALAT& env){
 
@@ -3713,9 +3756,10 @@ int EnvironmentNAVXYTHETALAT::GetHBSPCost(int& hidx,
   int x, y, th;
   GetCoordFromState(v.first, x, y, th);
 
-  if(v.first == EnvNAVXYTHETALAT.startstateid) {
-    return HBSP_dist_.at(std::make_pair(EnvNAVXYTHETALAT.goalstateid, desired_sig));
-  } else if(v.first == EnvNAVXYTHETALAT.goalstateid) {
+  // if(v.first == EnvNAVXYTHETALAT.startstateid) {
+  //   return HBSP_dist_.at(std::make_pair(EnvNAVXYTHETALAT.goalstateid, desired_sig));
+  // } else 
+  if(v.first == EnvNAVXYTHETALAT.goalstateid) {
     return 0;
   }
   
@@ -3747,7 +3791,10 @@ int EnvironmentNAVXYTHETALAT::GetHBSPCost(int& hidx,
   PrevNodes prev;
   GoalSet goals;
 
-  std::cout << "return HBSP: " << Q_->size() << std::endl;
+  std::cout << "return HBSP: (" << x << ", " << y << ", {";
+  for(auto& s:desired_sig)
+    std::cout << s << ", ";
+  std::cout << "})" << std::endl;
   return HBSP(env, prev, goals, *Q_, false, centroids_, S_, suffixes_, v.first, 
     EnvNAVXYTHETALAT.startstateid, EnvironmentNAVXYTHETALAT::HBSP_dist_);
 }

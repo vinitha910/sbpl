@@ -84,6 +84,7 @@ class hash_vertex_sig {
 // key: (q,s), value: distance to (q,s)/g value
 
 typedef std::unordered_map<std::pair<int, std::vector<int> >, int, hash_vertex_sig> VertexCostMap;
+typedef std::unordered_map<int, int> DijkstraCostMap;
 
 struct EnvNAVXYTHETALATAction_t
 {
@@ -741,7 +742,8 @@ public:
                bool bipedal = false);
 
     static VertexCostMap HBSP_dist_;
-    
+    static DijkstraCostMap dijkstra_dist_;
+
     class comparator {
     public:
     comparator(VertexCostMap& dist,
@@ -749,19 +751,19 @@ public:
            int gx,
            int gy):dist_(dist), env_(env), gx_(gx), gy_(gy){}
       bool operator()(const std::pair<int,std::vector<int> >& v1,
-              const std::pair<int,std::vector<int> >& v2) const {
+                      const std::pair<int,std::vector<int> >& v2) const {
 
-    int v1x, v1y, v1th, v2x, v2y, v2th;
-    env_.GetCoordFromState(v1.first, v1x, v1y, v1th);
-    env_.GetCoordFromState(v2.first, v2x, v2y, v2th);
-    
-    int v1_sqdist = ((gx_ - v1x) * (gx_ - v1x) + (gy_ - v1y) * (gy_ - v1y));
-    int v1_euc_dist = env_.EnvNAVXYTHETALATCfg.cellsize_m * sqrt((double)v1_sqdist);
+        // int v1x, v1y, v1th, v2x, v2y, v2th;
+        // env_.GetCoordFromState(v1.first, v1x, v1y, v1th);
+        // env_.GetCoordFromState(v2.first, v2x, v2y, v2th);
+        
+        // int v1_sqdist = ((gx_ - v1x) * (gx_ - v1x) + (gy_ - v1y) * (gy_ - v1y));
+        // int v1_euc_dist = env_.EnvNAVXYTHETALATCfg.cellsize_m * sqrt((double)v1_sqdist);
 
-    int v2_sqdist = ((gx_ - v2x) * (gx_ - v2x) + (gy_ - v2y) * (gy_ - v2y));
-    int v2_euc_dist = env_.EnvNAVXYTHETALATCfg.cellsize_m * sqrt((double)v2_sqdist);
+        // int v2_sqdist = ((gx_ - v2x) * (gx_ - v2x) + (gy_ - v2y) * (gy_ - v2y));
+        // int v2_euc_dist = env_.EnvNAVXYTHETALATCfg.cellsize_m * sqrt((double)v2_sqdist);
 
-    return dist_.at(v1) <= dist_.at(v2);
+        return dist_.at(v1) <= dist_.at(v2);
       }
 
     private:
@@ -771,6 +773,22 @@ public:
       int gy_;
     };
 
+    class dijkstra_comparator {
+    public:
+    dijkstra_comparator(DijkstraCostMap& dist,
+                        EnvironmentNAVXYTHETALAT& env)
+                        :dist_(dist), env_(env){}
+
+      bool operator()(const int& v1,
+                      const int& v2) const {
+        return dist_.at(v1) <= dist_.at(v2);
+      }
+
+    private:
+      DijkstraCostMap& dist_;
+      EnvironmentNAVXYTHETALAT& env_;
+    };
+      
     std::set<vertex_sig, comparator>* Q_;
     std::map<std::pair<int,int>, int, centroid_comparator> centroids_;
     std::map<std::pair<int,int>, int, centroid_comparator>* humanoid_centroids_;
@@ -803,12 +821,16 @@ public:
        int start_id,
        VertexCostMap& dist_);
 
+    virtual void Dijkstra
+       (EnvironmentNAVXYTHETALAT& env,
+        int start_id);
+
     virtual void GetHBSPPaths
       (std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,
        std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig>& prev_,
        std::unordered_map<std::pair<int, std::vector<int> >, std::vector<std::pair<int, std::vector<int> > >, hash_vertex_sig>& paths_);
 
-    virtual int GetHBSPCost(int& hidx,
+    virtual int GetHBSPCost(int hidx,
                 std::pair<int, std::vector<int> > v,
                 EnvironmentNAVXYTHETALAT& env);
 

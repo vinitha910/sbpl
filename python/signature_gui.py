@@ -16,9 +16,9 @@ class ExampleApp(tk.Tk):
         self.x = self.y = 0
         self.points_recorded = []
         self.path = []
-        self.canvas = tk.Canvas(self, width=500, height=500, bg = "white", cursor="cross")
+        self.canvas = tk.Canvas(self, width=400, height=400, bg = "white", cursor="cross")
         self.canvas.pack(side="top", fill="both", expand=True)
-        self.image = ImageTk.PhotoImage(file = "/home/vinitha910/Pictures/projection.png")
+        self.image = ImageTk.PhotoImage(file = "/home/vinitha910/Pictures/test.png")
         self.canvas.create_image(0, 0, image = self.image, anchor = NW)
         self.button_print = tk.Button(self, text = "Display Path Points", command = self.print_points)
         self.button_print.pack(side="top", fill="both", expand=True)
@@ -28,6 +28,10 @@ class ExampleApp(tk.Tk):
         self.button_sig.pack(side="top", fill="both", expand=True)
         self.canvas.bind("<Motion>", self.tell_me_where_you_are)
         self.canvas.bind("<B1-Motion>", self.draw_from_where_you_are)
+        # self.canvas.create_oval(76, 500 - 260, 84, 500 -268, fill = "#2C9421", outline = "#2C9421")
+        # self.canvas.create_oval(225, 500 - 38, 233, 500 - 46, fill = "#083A9E", outline = "#083A9E")
+        self.canvas.create_oval(30*2, (200 - 25)*2, 34*2, (200 - 29)*2, fill = "#2C9421", outline = "#2C9421")
+        self.canvas.create_oval(120*2, (200 - 110)*2, 124*2, (200 - 114)*2, fill = "#083A9E", outline = "#083A9E")
 
     def clear_all(self):
         for l in self.path:
@@ -50,7 +54,7 @@ class ExampleApp(tk.Tk):
         self.x = event.x
         self.y = event.y
         l = self.canvas.create_line(self.previous_x, self.previous_y, 
-                                self.x, self.y,fill="blue",width=3)
+                                self.x, self.y,fill="#098C76",width=3)
         self.path.append(l)
         self.points_recorded.append((self.previous_x, 500 - self.previous_y))
         self.points_recorded.append((self.x, 500 - self.y))       
