@@ -60,6 +60,7 @@ EnvironmentNAVXYTHETALATTICE::EnvironmentNAVXYTHETALATTICE()
     EnvNAVXYTHETALATCfg.cost_inscribed_thresh = EnvNAVXYTHETALATCfg.obsthresh;
     // the value that pretty much makes it disabled
     EnvNAVXYTHETALATCfg.cost_possibly_circumscribed_thresh = -1;
+    EnvNAVXYTHETALATCfg.inflation_radius = 0;
 
     grid2Dsearchfromstart = NULL;
     grid2Dsearchfromgoal = NULL;
@@ -78,6 +79,7 @@ EnvironmentNAVXYTHETALATTICE::EnvironmentNAVXYTHETALATTICE()
 
     // no memory allocated in cfg yet
     EnvNAVXYTHETALATCfg.Grid2D = NULL;
+    EnvNAVXYTHETALATCfg.dt = NULL;
     EnvNAVXYTHETALATCfg.ActionsV = NULL;
     EnvNAVXYTHETALATCfg.PredActionsV = NULL;
 }
@@ -101,6 +103,14 @@ EnvironmentNAVXYTHETALATTICE::~EnvironmentNAVXYTHETALATTICE()
         }
         delete[] EnvNAVXYTHETALATCfg.Grid2D;
         EnvNAVXYTHETALATCfg.Grid2D = NULL;
+    }
+
+    if (EnvNAVXYTHETALATCfg.dt != NULL) {
+        for (int x = 0; x < EnvNAVXYTHETALATCfg.EnvWidth_c; x++) {
+            delete[] EnvNAVXYTHETALATCfg.dt[x];
+        }
+        delete[] EnvNAVXYTHETALATCfg.dt;
+        EnvNAVXYTHETALATCfg.dt = NULL;
     }
 
     //delete actions
@@ -200,6 +210,11 @@ void EnvironmentNAVXYTHETALATTICE::SetConfiguration(
     EnvNAVXYTHETALATCfg.Grid2D = new unsigned char*[EnvNAVXYTHETALATCfg.EnvWidth_c];
     for (int x = 0; x < EnvNAVXYTHETALATCfg.EnvWidth_c; x++) {
         EnvNAVXYTHETALATCfg.Grid2D[x] = new unsigned char[EnvNAVXYTHETALATCfg.EnvHeight_c];
+    }
+
+    EnvNAVXYTHETALATCfg.dt = new float*[EnvNAVXYTHETALATCfg.EnvWidth_c];
+    for (int x = 0; x < EnvNAVXYTHETALATCfg.EnvWidth_c; x++) {
+        EnvNAVXYTHETALATCfg.dt[x] = new float[EnvNAVXYTHETALATCfg.EnvHeight_c];
     }
 
     // environment:
@@ -432,6 +447,23 @@ void EnvironmentNAVXYTHETALATTICE::ReadConfiguration(FILE* fCfg)
         throw SBPL_Exception("ERROR: illegal end coordinates");
     }
 
+    // inflation_radius:
+    if (fscanf(fCfg, "%s", sTemp) != 1) {
+        throw SBPL_Exception("ERROR: ran out of env file early");
+    }
+    strcpy(sTemp1, "inflation_radius:");
+    if (strcmp(sTemp1, sTemp) != 0) {
+        std::stringstream ss;
+        ss << "ERROR: configuration file has incorrect format" <<
+                " Expected " << sTemp1 << " got " << sTemp;
+        throw SBPL_Exception(ss.str());
+    }
+    if (fscanf(fCfg, "%s", sTemp) != 1) {
+        throw SBPL_Exception("ERROR: ran out of env file early");
+    }
+    EnvNAVXYTHETALATCfg.inflation_radius = atof(sTemp);
+    SBPL_PRINTF("inflation_radius= %d\n", EnvNAVXYTHETALATCfg.inflation_radius);
+
     // unallocate the 2d environment
     if (EnvNAVXYTHETALATCfg.Grid2D != NULL) {
         for (int x = 0; x < EnvNAVXYTHETALATCfg.EnvWidth_c; x++) {
@@ -447,6 +479,11 @@ void EnvironmentNAVXYTHETALATTICE::ReadConfiguration(FILE* fCfg)
         EnvNAVXYTHETALATCfg.Grid2D[x] = new unsigned char[EnvNAVXYTHETALATCfg.EnvHeight_c];
     }
 
+    EnvNAVXYTHETALATCfg.dt = new float*[EnvNAVXYTHETALATCfg.EnvWidth_c];
+    for (int x = 0; x < EnvNAVXYTHETALATCfg.EnvWidth_c; x++) {
+        EnvNAVXYTHETALATCfg.dt[x] = new float[EnvNAVXYTHETALATCfg.EnvHeight_c];
+    }
+
     // environment:
     if (fscanf(fCfg, "%s", sTemp) != 1) {
         throw SBPL_Exception("ERROR: ran out of env file early");
@@ -459,6 +496,84 @@ void EnvironmentNAVXYTHETALATTICE::ReadConfiguration(FILE* fCfg)
             EnvNAVXYTHETALATCfg.Grid2D[x][y] = dTemp;
         }
     }
+
+    ComputeDistanceTransform();
+    std::cout << "inflation_radius: " << EnvNAVXYTHETALATCfg.inflation_radius << std::endl;
+    if(EnvNAVXYTHETALATCfg.inflation_radius != 0) {
+        InflateObstacles();
+        std::cout << "inflating obstacles" << std::endl;
+    }
+}
+
+void EnvironmentNAVXYTHETALATTICE::ComputeDistanceTransform()
+{
+    int G[EnvNAVXYTHETALATCfg.EnvWidth_c][EnvNAVXYTHETALATCfg.EnvHeight_c];
+
+    const int inf = EnvNAVXYTHETALATCfg.EnvWidth_c + EnvNAVXYTHETALATCfg.EnvHeight_c;
+
+    // scan the first row
+    for (int x = 0; x < EnvNAVXYTHETALATCfg.EnvWidth_c; ++x) {
+        if (EnvNAVXYTHETALATCfg.Grid2D[x][0]) {
+            G[x][0] = 0;
+        }
+        else {
+            G[x][0] = inf;
+        }
+
+        for (int y = 1; y < EnvNAVXYTHETALATCfg.EnvHeight_c; ++y) {
+            if (EnvNAVXYTHETALATCfg.Grid2D[x][y]) {
+                G[x][y] = 0;
+            }
+            else {
+                G[x][y] = G[x][y - 1] + 1;
+            }
+        }
+
+        for (int y = EnvNAVXYTHETALATCfg.EnvHeight_c - 2; y >= 0; --y) {
+            if (G[x][y + 1] < G[x][y]) {
+                G[x][y] = 1 + G[x][y + 1];
+            }
+        }
+    }
+
+    float val;
+    for (int y = 0; y < EnvNAVXYTHETALATCfg.EnvHeight_c; ++y) {
+        for (int x = 0; x < EnvNAVXYTHETALATCfg.EnvWidth_c; ++x) {
+            int m = std::numeric_limits<int>::max(), d;
+            for (int i = 0; i < EnvNAVXYTHETALATCfg.EnvWidth_c; ++i) {
+                d = sqrd(x - i) + sqrd(G[i][y]);
+                if (d < m) {
+                    m = d;
+                }
+            }
+            EnvNAVXYTHETALATCfg.dt[x][y] = std::sqrt(m);
+        }
+    }
+
+    for (int x = 0; x < EnvNAVXYTHETALATCfg.EnvWidth_c; ++x) {
+        for (int y = 0; y < EnvNAVXYTHETALATCfg.EnvHeight_c; ++y) {
+            printf("%2f ", EnvNAVXYTHETALATCfg.dt[x][y]);
+        }
+        printf("\n");
+    }
+}
+
+void EnvironmentNAVXYTHETALATTICE::InflateObstacles()
+{
+    FILE* f = fopen("/home/vinitha910/Documents/projection_inflated.cfg", "w");
+    fprintf(f, "discretization(cells): %d %d\n", EnvNAVXYTHETALATCfg.EnvWidth_c, EnvNAVXYTHETALATCfg.EnvHeight_c);
+    fprintf(f, "cellsize(meters): %f\n", EnvNAVXYTHETALATCfg.cellsize_m);
+    fprintf(f, "environment:\n");
+    for (int y = 0; y < EnvNAVXYTHETALATCfg.EnvHeight_c; y++) {
+        for (int x = 0; x < EnvNAVXYTHETALATCfg.EnvWidth_c; x++) {
+            if(EnvNAVXYTHETALATCfg.cellsize_m * EnvNAVXYTHETALATCfg.dt[x][y] <= EnvNAVXYTHETALATCfg.inflation_radius) {
+                EnvNAVXYTHETALATCfg.Grid2D[x][y] = 1;
+            }
+            fprintf(f, "%d ", EnvNAVXYTHETALATCfg.Grid2D[x][y]);
+        }
+        fprintf(f, "\n");
+    }
+    fclose(f);
 }
 
 bool EnvironmentNAVXYTHETALATTICE::ReadinCell(
@@ -3595,8 +3710,8 @@ void EnvironmentNAVXYTHETALAT::Dijkstra(
        EnvironmentNAVXYTHETALAT& env,
        int start_id) {
 
-  EnvironmentNAVXYTHETALAT::dijkstra_comparator cmp(EnvironmentNAVXYTHETALAT::dijkstra_dist_, env);
-  std::set<int, dijkstra_comparator> Q = std::set<int, EnvironmentNAVXYTHETALAT::dijkstra_comparator>(cmp);  
+  EnvironmentNAVXYTHETALAT::dijkstra_comparator cmp(dijkstra_dist_, env);
+  std::set<int, dijkstra_comparator> Q = std::set<int, dijkstra_comparator>(cmp);  
   dijkstra_dist_.insert(std::make_pair(start_id, 0));
   Q.insert(start_id);
 
@@ -3612,16 +3727,16 @@ void EnvironmentNAVXYTHETALAT::Dijkstra(
     costs.clear();
     env.GetSuccs(u, &succ_ids, &costs);
     assert(succ_ids.size() == costs.size());
-    
-    int dist_u = EnvironmentNAVXYTHETALAT::dijkstra_dist_.at(u);
+
+    int dist_u = dijkstra_dist_.at(u);
     for (int sidx = 0; sidx < succ_ids.size(); ++sidx) {
       int alt = dist_u + costs[sidx];
       int curr_vertex = succ_ids[sidx];
 
       // Check if current vertex was explored, i.e. if dist is specified
-      auto dist_curr = EnvironmentNAVXYTHETALAT::dijkstra_dist_.find(curr_vertex);
-      if(dist_curr == EnvironmentNAVXYTHETALAT::dijkstra_dist_.end() || alt < dist_curr->second) {
-        EnvironmentNAVXYTHETALAT::dijkstra_dist_.insert(std::make_pair(curr_vertex, alt));
+      auto dist_curr = dijkstra_dist_.find(curr_vertex);
+      if(dist_curr == dijkstra_dist_.end() || alt < dist_curr->second) {
+        dijkstra_dist_.insert(std::make_pair(curr_vertex, alt));
 
         auto it = Q.find(curr_vertex);
         if(it != Q.end()) {
@@ -3797,6 +3912,13 @@ int EnvironmentNAVXYTHETALAT::GetHBSPCost(int hidx,
   std::cout << "})" << std::endl;
   return HBSP(env, prev, goals, *Q_, false, centroids_, S_, suffixes_, v.first, 
     EnvNAVXYTHETALAT.startstateid, EnvironmentNAVXYTHETALAT::HBSP_dist_);
+}
+
+int EnvironmentNAVXYTHETALAT::GetDijkstraCost(int state_id){
+  if(dijkstra_dist_.count(state_id) > 0)
+    return dijkstra_dist_.at(state_id);
+ 
+    return std::numeric_limits<int>::max();
 }
 
 int EnvironmentNAVXYTHETALAT::GetEuclideanDistToGoal(int& state_id) {

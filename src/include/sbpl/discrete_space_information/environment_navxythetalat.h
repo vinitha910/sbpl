@@ -70,6 +70,9 @@ class SBPL2DGridSearch;
 typedef std::pair<int,std::vector<int> > vertex_sig;
 typedef std::vector<std::pair<int,std::vector<int> > > vertex_sig_vec;
 
+template <class T>
+T sqrd(T a) { return a * a; }
+
 // Hashing function for vertex signature pair 
 class hash_vertex_sig {
  public:
@@ -150,6 +153,8 @@ struct EnvNAVXYTHETALATConfig_t
     int EndY_c;
     int EndTheta;
     unsigned char** Grid2D;
+    float** dt; // Distance transform
+    float inflation_radius;
 
     std::vector<double> ThetaDirs;
     double StartTheta_rad;
@@ -482,7 +487,7 @@ public:
      * \brief prints environment variables for debugging
      */
     virtual void PrintVars() { }
-    
+
 protected:
     virtual int GetActionCost(int SourceX, int SourceY, int SourceTheta, EnvNAVXYTHETALATAction_t* action);
 
@@ -504,6 +509,10 @@ protected:
     SBPL2DGridSearch* grid2Dsearchfromgoal; //computes h-values that estimate distances to goal x,y from all cells
 
     virtual void ReadConfiguration(FILE* fCfg);
+
+    virtual void ComputeDistanceTransform();
+
+    virtual void InflateObstacles();
 
     virtual void InitializeEnvConfig(std::vector<SBPL_xytheta_mprimitive>* motionprimitiveV);
 
@@ -833,6 +842,8 @@ public:
     virtual int GetHBSPCost(int hidx,
                 std::pair<int, std::vector<int> > v,
                 EnvironmentNAVXYTHETALAT& env);
+
+    virtual int GetDijkstraCost(int state_id);
 
     virtual int GetEuclideanDistToGoal(int& state_id);
     
