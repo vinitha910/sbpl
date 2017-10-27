@@ -751,7 +751,9 @@ public:
                bool bipedal = false);
 
     static VertexCostMap HBSP_dist_;
+    static int hbsp_max_dist_;
     static DijkstraCostMap dijkstra_dist_;
+    static int dijkstra_max_dist_;
 
     class comparator {
     public:
@@ -833,6 +835,8 @@ public:
     virtual void Dijkstra
        (EnvironmentNAVXYTHETALAT& env,
         int start_id);
+
+    virtual bool IsObstacle(int x, int y);
 
     virtual void GetHBSPPaths
       (std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals,

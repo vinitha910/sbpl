@@ -18,7 +18,7 @@ class ExampleApp(tk.Tk):
         self.path = []
         self.canvas = tk.Canvas(self, width=200, height=200, bg = "white", cursor="cross")
         self.canvas.pack(side="top", fill="both", expand=True)
-        self.image = ImageTk.PhotoImage(file = "/home/vinitha910/Pictures/living_room_projection.png")
+        self.image = ImageTk.PhotoImage(file = "/home/vinitha910/Pictures/living_room_inflated_projection_2.png")
         self.canvas.create_image(0, 0, image = self.image, anchor = NW)
         self.button_print = tk.Button(self, text = "Display Path Points", command = self.print_points)
         self.button_print.pack(side="top", fill="both", expand=True)
@@ -56,14 +56,22 @@ class ExampleApp(tk.Tk):
         l = self.canvas.create_line(self.previous_x, self.previous_y, 
                                 self.x, self.y,fill="#098C76",width=3)
         self.path.append(l)
-        self.points_recorded.append((self.previous_x, 500 - self.previous_y))
-        self.points_recorded.append((self.x, 500 - self.y))       
+        self.points_recorded.append((self.previous_x, 200 - self.previous_y))
+        self.points_recorded.append((self.x, 200 - self.y))       
         self.previous_x = self.x
         self.previous_y = self.y
 
     def signature(self):
-        centroids = [(183, 150), (40, 115), (114, 262), (168, 208), (143, 152),
-                     (132, 254), (218, 73), (269, 215), (330, 65)]
+        # house
+        # centroids = [(183, 150), (40, 115), (114, 262), (168, 208), (143, 152),
+        #             (132, 254), (218, 73), (269, 215), (330, 65)]
+
+        # living_room
+        # centroids = [(19, 11), (151, 45), (84, 0), (150, 14)]
+
+        # living room 2
+        centroids = [(17, 9), (5,142), (74,0), (117,70), (90,110), (161,12)]
+
         prev = self.points_recorded[0]
         sig = []
         for p in self.points_recorded[1:]:

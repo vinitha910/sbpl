@@ -498,10 +498,9 @@ void EnvironmentNAVXYTHETALATTICE::ReadConfiguration(FILE* fCfg)
     }
 
     ComputeDistanceTransform();
-    std::cout << "inflation_radius: " << EnvNAVXYTHETALATCfg.inflation_radius << std::endl;
     if(EnvNAVXYTHETALATCfg.inflation_radius != 0) {
+        std::cout << "Inflating Obstacles" << std::endl;
         InflateObstacles();
-        std::cout << "inflating obstacles" << std::endl;
     }
 }
 
@@ -548,13 +547,6 @@ void EnvironmentNAVXYTHETALATTICE::ComputeDistanceTransform()
             }
             EnvNAVXYTHETALATCfg.dt[x][y] = std::sqrt(m);
         }
-    }
-
-    for (int x = 0; x < EnvNAVXYTHETALATCfg.EnvWidth_c; ++x) {
-        for (int y = 0; y < EnvNAVXYTHETALATCfg.EnvHeight_c; ++y) {
-            printf("%2f ", EnvNAVXYTHETALATCfg.dt[x][y]);
-        }
-        printf("\n");
     }
 }
 
@@ -3570,19 +3562,20 @@ void EnvironmentNAVXYTHETALAT::CreateObsMap(std::unordered_map<std::pair<int,int
     std::vector<std::pair<int,int> > neighbors;
     for(int i = 0; i < EnvNAVXYTHETALATCfg.EnvWidth_c; i++){
       for(int j = 0; j <  EnvNAVXYTHETALATCfg.EnvHeight_c; j++){
-    if(visited[i][j] == 1){
-      continue;
-    } else if(EnvNAVXYTHETALATCfg.Grid2D[i][j] >= EnvNAVXYTHETALATCfg.obsthresh){ 
-      ++obs_num;
-      CheckNeighbors(i, j, obs_num, visited, neighbors, obs_map);
-      while(!neighbors.empty()){
-        CheckNeighbors(neighbors.front().first, neighbors.front().second, obs_num, visited, neighbors, obs_map);
-        neighbors.erase(neighbors.begin());
+        if(visited[i][j] == 1){
+          continue;
+        } else if(EnvNAVXYTHETALATCfg.Grid2D[i][j] >= EnvNAVXYTHETALATCfg.obsthresh){ 
+          ++obs_num;
+          CheckNeighbors(i, j, obs_num, visited, neighbors, obs_map);
+          while(!neighbors.empty()){
+            CheckNeighbors(neighbors.front().first, neighbors.front().second, obs_num, visited, neighbors, obs_map);
+            neighbors.erase(neighbors.begin());
+          }
+        }
+        visited[i][j] = 1;
       }
     }
-    visited[i][j] = 1;
-      }
-    }
+    ComputeDistanceTransform();
 }  
 
 void EnvironmentNAVXYTHETALAT::FindCentroids(std::unordered_map<std::pair<int,int>, int, pair_hash> obs_map, 
@@ -3667,7 +3660,7 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
       iter_low = centroids.lower_bound(std::make_pair(x_low, y_low));
       iter_high = centroids.upper_bound(std::make_pair(x_high, y_high));
 
-      //collect signatures crossed from left to right
+      //collect signatures crossed from right to left
       for(auto iter = iter_low; iter != iter_high; ++iter) {
         beam = iter->second;
         std::pair<int,int> beam_coor = iter->first; 
@@ -3683,29 +3676,29 @@ void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
   if (ux < vx)
     {
       for(auto iter = added_signature.begin(); iter != added_signature.end(); ++iter) {
-    int beam = *iter;
-    if(!succ_sig.empty() && succ_sig.back() == -1 * beam){
-      succ_sig.pop_back();
-    } else {
-      succ_sig.push_back(beam);
-    }
+        int beam = *iter;
+        if(!succ_sig.empty() && succ_sig.back() == -1 * beam){
+          succ_sig.pop_back();
+        } else {
+          succ_sig.push_back(beam);
+        }
       }
     }
   else //ux > vx
     {
       for(auto iter = added_signature.rbegin(); iter != added_signature.rend(); ++iter) {
-    int beam = *iter;
-    if(!succ_sig.empty() && succ_sig.back() == beam){
-      succ_sig.pop_back();
-    } else {
-      succ_sig.push_back(-1*beam);
-    }
+        int beam = *iter;
+        if(!succ_sig.empty() && succ_sig.back() == beam){
+          succ_sig.pop_back();
+        } else {
+          succ_sig.push_back(-1*beam);
+        }
       }
     }    
 }
 
 DijkstraCostMap EnvironmentNAVXYTHETALAT::dijkstra_dist_ = {};
-
+int EnvironmentNAVXYTHETALAT::dijkstra_max_dist_ = 0;
 void EnvironmentNAVXYTHETALAT::Dijkstra(
        EnvironmentNAVXYTHETALAT& env,
        int start_id) {
@@ -3737,18 +3730,22 @@ void EnvironmentNAVXYTHETALAT::Dijkstra(
       auto dist_curr = dijkstra_dist_.find(curr_vertex);
       if(dist_curr == dijkstra_dist_.end() || alt < dist_curr->second) {
         dijkstra_dist_.insert(std::make_pair(curr_vertex, alt));
+        if(alt > dijkstra_max_dist_) {
+            dijkstra_max_dist_ = alt;
+        }
 
         auto it = Q.find(curr_vertex);
         if(it != Q.end()) {
-            Q.insert(curr_vertex);
+            Q.erase(it);    
         } 
+        Q.insert(curr_vertex);
       }
     }
   }
 }
 
 VertexCostMap EnvironmentNAVXYTHETALAT::HBSP_dist_ = {};
-
+int EnvironmentNAVXYTHETALAT::hbsp_max_dist_ = 0;
 int EnvironmentNAVXYTHETALAT::HBSP(
        EnvironmentNAVXYTHETALAT& env,
        PrevNodes& prev_,
@@ -3773,6 +3770,16 @@ int EnvironmentNAVXYTHETALAT::HBSP(
     dist_.insert(std::make_pair(init_v, 0));
     Q.insert(init_v);
   } 
+
+  int x, y, th;
+  GetCoordFromState(end_id, x, y, th);
+  if(EnvNAVXYTHETALATCfg.dt[x][y] * EnvNAVXYTHETALATCfg.cellsize_m <= EnvNAVXYTHETALATCfg.cellsize_m * 3) {
+    for(auto &s: S) {
+        std::pair<int, std::vector<int> > v(end_id, s);
+        dist_.insert(std::make_pair(v, std::numeric_limits<int>::max()));
+    }
+    return std::numeric_limits<int>::max();
+  }
 
   CreateGoalSet(end_id, S, goals);
 
@@ -3817,6 +3824,9 @@ int EnvironmentNAVXYTHETALAT::HBSP(
       auto dist_curr = dist_.find(curr_vertex);
       if(dist_curr == dist_.end() || alt < dist_curr->second) {
         dist_.insert(std::make_pair(curr_vertex, alt));
+        if(alt > hbsp_max_dist_) {
+            hbsp_max_dist_ = alt;
+        }
 
         auto it = Q.find(curr_vertex);
         if(it != Q.end()) {
@@ -3828,7 +3838,7 @@ int EnvironmentNAVXYTHETALAT::HBSP(
           goals.erase(curr_vertex);
           if(goals.empty()) {
             Q_ = &Q;
-            std::cout << "Q size: " << EnvironmentNAVXYTHETALAT::Q_->size() << std::endl;
+            //std::cout << "Q size AFTER: " << Q.size() << std::endl;
             return dist_.at(curr_vertex);
           }
         }
@@ -3837,6 +3847,12 @@ int EnvironmentNAVXYTHETALAT::HBSP(
   }
 
   return std::numeric_limits<int>::max();
+}
+
+bool EnvironmentNAVXYTHETALAT::IsObstacle(int x, int y) {
+    if(EnvNAVXYTHETALATCfg.Grid2D[x][y] == 1) 
+        return true;
+    return false;
 }
 
 void EnvironmentNAVXYTHETALAT::GetHBSPPaths(
@@ -3877,6 +3893,10 @@ int EnvironmentNAVXYTHETALAT::GetHBSPCost(int hidx,
   if(v.first == EnvNAVXYTHETALAT.goalstateid) {
     return 0;
   }
+
+  if(IsObstacle(x,y)) {
+    return std::numeric_limits<int>::max();
+  }
   
   bool overlap = true;
   while(overlap && !v.second.empty() && !desired_sig.empty()) {
@@ -3906,19 +3926,27 @@ int EnvironmentNAVXYTHETALAT::GetHBSPCost(int hidx,
   PrevNodes prev;
   GoalSet goals;
 
-  std::cout << "return HBSP: (" << x << ", " << y << ", {";
-  for(auto& s:desired_sig)
-    std::cout << s << ", ";
-  std::cout << "})" << std::endl;
-  return HBSP(env, prev, goals, *Q_, false, centroids_, S_, suffixes_, v.first, 
+  // std::cout << "return HBSP: (" << x << ", " << y << ", {";
+  // for(auto& s:desired_sig){
+  //   std::cout << s << ", ";
+  // }
+  // std::cout << "})" << std::endl;
+
+  int dist = HBSP(env, prev, goals, *Q_, false, centroids_, S_, suffixes_, v.first, 
     EnvNAVXYTHETALAT.startstateid, EnvironmentNAVXYTHETALAT::HBSP_dist_);
+
+  // FILE* f = fopen("/home/vinitha910/Documents/hbsp_on_demand_vals.txt", "a");
+  // fprintf(f, "%d %d %d\n", x, y, dist);
+  // fclose(f);
+
+  return dist;
 }
 
 int EnvironmentNAVXYTHETALAT::GetDijkstraCost(int state_id){
   if(dijkstra_dist_.count(state_id) > 0)
     return dijkstra_dist_.at(state_id);
- 
-    return std::numeric_limits<int>::max();
+  
+  return std::numeric_limits<int>::max();
 }
 
 int EnvironmentNAVXYTHETALAT::GetEuclideanDistToGoal(int& state_id) {
