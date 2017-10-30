@@ -3617,83 +3617,77 @@ void EnvironmentNAVXYTHETALAT::CreateGoalSet(int end_id,
   }
 }
 
-void EnvironmentNAVXYTHETALAT::Signature(std::pair<int, std::vector<int> > u,
-                     int v_id,
-                     EnvironmentNAVXYTHETALAT& env,
-                     std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
-                     std::vector<int>& succ_sig,
-                     bool bipedal) {
+void EnvironmentNAVXYTHETALAT::Signature(
+    std::pair<int, std::vector<int> > u,
+    int v_id,
+    EnvironmentNAVXYTHETALAT& env,
+    std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
+    std::vector<int>& succ_sig,
+    bool bipedal)
+{
+    int vx, vy, vtheta, ux, uy, utheta, beam;
+    env.GetCoordFromState(v_id, vx, vy, vtheta); 
+    env.GetCoordFromState(u.first, ux, uy, utheta);
+    //std::cout << "(" << ux << ", " << uy << ") Successor: {(" << vx << ", " << vy << "), ";
 
-  int vx, vy, vtheta, ux, uy, utheta, beam;
-  env.GetCoordFromState(v_id, vx, vy, vtheta); 
-  env.GetCoordFromState(u.first, ux, uy, utheta);
-  //std::cout << "(" << ux << ", " << uy << ") Successor: {(" << vx << ", " << vy << "), ";
+    std::map<std::pair<int,int>, int, centroid_comparator>::iterator iter_low,iter_high;
+    int x_low, x_high, y_low, y_high;
+    std::vector<int> added_signature;
 
-  std::map<std::pair<int,int>, int, centroid_comparator>::iterator iter_low,iter_high;
-  int x_low, x_high, y_low, y_high;
-  std::vector<int> added_signature;
-  if (ux < vx) {
-      x_low = ux;
-      x_high= vx;
-      y_low = uy;
-      y_high = vy;
+    succ_sig.assign(u.second.begin(), u.second.end());
 
-      iter_low = centroids.lower_bound(std::make_pair(x_low, y_low));
-      iter_high = centroids.upper_bound(std::make_pair(x_high, y_high));
+    //collect signatures crossed from left to right
+    if (ux < vx) {
+        x_low = ux;
+        x_high= vx;
+        y_low = uy;
+        y_high = vy;
+    } 
 
-      //collect signatures crossed from left to right
-  
-      for(auto iter = iter_low; iter != iter_high; ++iter) {
-        beam = iter->second;
-        std::pair<int,int> beam_coor = iter->first; 
-        if(x_high >= beam_coor.first && y_high > beam_coor.second &&
-            x_low < beam_coor.first) {
-            added_signature.push_back(beam);
-        }
-      }
-  } else {
-      x_low = vx;
-      x_high= ux;
-      y_low = vy;
-      y_high = uy;
+    //collect signatures crossed from right to left
+    else if (ux > vx) {
+        x_low = vx;
+        x_high= ux;
+        y_low = vy;
+        y_high = uy;
+    }
 
-      iter_low = centroids.lower_bound(std::make_pair(x_low, y_low));
-      iter_high = centroids.upper_bound(std::make_pair(x_high, y_high));
+    // if ux == vx no beam has been crossed
+    else {
+      return;
+    }
 
-      //collect signatures crossed from right to left
-      for(auto iter = iter_low; iter != iter_high; ++iter) {
+    iter_low = centroids.lower_bound(std::make_pair(x_low, y_low));    // takes beam that is at x_low or after
+    iter_high = centroids.upper_bound(std::make_pair(x_high, y_high));
+
+    for(auto iter = iter_low; iter != iter_high; ++iter) {
         beam = iter->second;
         std::pair<int,int> beam_coor = iter->first; 
         if(x_high > beam_coor.first && y_high > beam_coor.second &&
-            x_low <= beam_coor.first) {
+           x_low <= beam_coor.first && y_low > beam_coor.second) {
             added_signature.push_back(beam);
         }
-      }
     }
 
-  succ_sig.assign(u.second.begin(), u.second.end());
-  //update succ_sig
-  if (ux < vx)
-    {
-      for(auto iter = added_signature.begin(); iter != added_signature.end(); ++iter) {
-        int beam = *iter;
-        if(!succ_sig.empty() && succ_sig.back() == -1 * beam){
-          succ_sig.pop_back();
-        } else {
-          succ_sig.push_back(beam);
+    // update succ_sig
+    if (ux < vx) {
+        for(auto iter = added_signature.begin(); iter != added_signature.end(); ++iter) {
+            int beam = *iter;
+            if(!succ_sig.empty() && succ_sig.back() == (-1 * beam)){
+                succ_sig.pop_back();
+            } else {
+                succ_sig.push_back(beam);
+            }
         }
-      }
-    }
-  else //ux > vx
-    {
-      for(auto iter = added_signature.rbegin(); iter != added_signature.rend(); ++iter) {
-        int beam = *iter;
-        if(!succ_sig.empty() && succ_sig.back() == beam){
-          succ_sig.pop_back();
-        } else {
-          succ_sig.push_back(-1*beam);
+    } else { // ux > vx
+        for(auto iter = added_signature.rbegin(); iter != added_signature.rend(); ++iter) {
+            int beam = *iter;
+            if(!succ_sig.empty() && succ_sig.back() == beam){
+                succ_sig.pop_back();
+            } else {
+                succ_sig.push_back(-1*beam);
+            } 
         }
-      }
     }    
 }
 
