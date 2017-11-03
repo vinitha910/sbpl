@@ -499,7 +499,6 @@ void EnvironmentNAVXYTHETALATTICE::ReadConfiguration(FILE* fCfg)
 
     ComputeDistanceTransform();
     if(EnvNAVXYTHETALATCfg.inflation_radius != 0) {
-        std::cout << "Inflating Obstacles" << std::endl;
         InflateObstacles();
     }
 }
@@ -3547,8 +3546,6 @@ void EnvironmentNAVXYTHETALAT::CheckNeighbors(int x,
       visited[xn][yn] = 1;
       
       auto result = obs_map.insert(std::make_pair(n_coor[i], obs_num));
-      if (result.second == false)
-    std::cout << "Failed to Insert: (" << x << ", " << y << ")" << std::endl;
     }
   }
 }
@@ -3583,7 +3580,6 @@ void EnvironmentNAVXYTHETALAT::FindCentroids(std::unordered_map<std::pair<int,in
                          int obs_num) {
 
   std::unordered_set<int> beams;
-  std::cout << obs_num << std::endl;
   while(centroids.size() != obs_num) {
     for (auto& x: obs_map) {
       if (beams.find(x.second) != beams.end()) {

@@ -3,6 +3,8 @@ import re
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
+import yaml
+from random import randint
 
 sys.setrecursionlimit(10000)
 
@@ -14,6 +16,7 @@ class DrawPath():
         self.fig, self.ax = plt.subplots(figsize=(10,10))
         self.ax.set_title('Draw a path from the blue circle to the green circle')
         self.ax.imshow(self.map_values, vmin=0, vmax=1, cmap='Greys', extent=None, aspect='equal')
+
         plt.ylim([0, self.map_values.shape[1]])
         plt.xlim([0, self.map_values.shape[0]])
 
@@ -84,7 +87,7 @@ class DrawPath():
                                      sublist])
         map_values = np.array(flattened_values).reshape(size_y, size_x)
         return map_values
-
+                
     def display_signature(self, event):
         prev = self.path_points[0]
         sig = []
@@ -126,16 +129,18 @@ class DrawPath():
             self.fig.canvas.flush_events()
 
 if __name__ == '__main__':
-    start_x = 73
-    start_y = 138
-    end_x = 338
-    end_y = 235
+    stream = open(sys.argv[1], "r")
+    params = yaml.load(stream)
+    end_x = params['goal']['GoalX'] / 0.05
+    end_y = params['goal']['GoalY'] / 0.05
+    start_x = params['StartX'] / 0.05
+    start_y = params['StartY'] / 0.05
 
-    centroids = [(202,168), (56, 142), (48,112), (136, 90), (195, 209),
-                 (166, 265), (153, 164), (232, 273), (277, 79), (342, 245), (403, 144)]
+    centroids = [(202,168), (56, 142), (48,112), (136, 90), (195, 209), (166, 265),
+                 (153, 164), (232, 273), (277, 79), (342, 245), (403, 144)]
     #centroids = [(17, 9), (5,142), (74,0), (117,70), (90,110), (161,12)]
 
-    draw_path = DrawPath(sys.argv[1], start_x, start_y, end_x, end_y, centroids)
+    draw_path = DrawPath(sys.argv[2], start_x, start_y, end_x, end_y, centroids)
 
       
 
