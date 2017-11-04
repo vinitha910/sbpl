@@ -7,6 +7,7 @@ import yaml
 from random import randint, uniform
 import math
 import glob
+import os
 
 sys.setrecursionlimit(10000)
 
@@ -16,8 +17,8 @@ class DrawPath():
         self.map = map
         self.map_values, self.size_x, self.size_y  = self.get_map(self.map)
         self.fig, self.ax = plt.subplots(figsize=(10,10))
-        test_num = len(glob.glob1("../../sbpl_mobility/scenarios/house/hbsp/", "*.yaml"))
-        self.ax.set_title("Draw a path from the blue circle to the green circle \n Test " + str(test_num), fontsize=18)
+        test_num = len(glob.glob("../../sbpl_mobility/scenarios/house/*")) - 1
+        self.ax.set_title("Draw a path from the green circle to the red circle \n Test " + str(test_num), fontsize=18)
         self.ax.imshow(self.map_values, vmin=0, vmax=1, cmap='Greys')
         self.sx, self.sy, self.gx, self.gy = self.get_random_start_goal_pairs()
         self.theta = 0
@@ -31,8 +32,8 @@ class DrawPath():
         # self.end_y = end_y
         self.centroids = centroids
 
-        self.start_circle = plt.Circle((self.gx,self.gy), 5, color='blue')
-        self.goal_circle = plt.Circle((self.sx,self.sy), 5, color='green')
+        self.start_circle = plt.Circle((self.gx,self.gy), 5, color='green')
+        self.goal_circle = plt.Circle((self.sx,self.sy), 5, color='red')
         self.ax.add_artist(self.start_circle)
         self.ax.add_artist(self.goal_circle)
 
@@ -108,8 +109,8 @@ class DrawPath():
 
         self.sx, self.sy, self.gx, self.gy = self.get_random_start_goal_pairs()
 
-        self.start_circle = plt.Circle((self.gx,self.gy), 5, color='blue')
-        self.goal_circle = plt.Circle((self.sx,self.sy), 5, color='green')
+        self.start_circle = plt.Circle((self.gx,self.gy), 5, color='green')
+        self.goal_circle = plt.Circle((self.sx,self.sy), 5, color='red')
         self.ax.add_artist(self.start_circle)
         self.ax.add_artist(self.goal_circle)
         self.delete_path(event)
@@ -178,32 +179,59 @@ class DrawPath():
         self.fig.canvas.flush_events()
 
     def write_test_file(self, event):
-        test_num = len(glob.glob1("../../sbpl_mobility/scenarios/house/hbsp/", "*.yaml"))
-        filename = "../../sbpl_mobility/scenarios/house/hbsp/test_" + str(test_num) + ".yaml"
+        test_num = len(glob.glob("../../sbpl_mobility/scenarios/house/*")) - 1
         
+        dir_name_hbsp = "../../sbpl_mobility/scenarios/house/hbsp_test_" + str(test_num)
+        if not os.path.exists(dir_name_hbsp):
+            os.makedirs(dir_name_hbsp)
+        filename_hbsp = dir_name_hbsp + "/planning_params.yaml"
+        
+        dir_name_dijkstra = "../../sbpl_mobility/scenarios/house/dijkstra_test_" + str(test_num)
+        if not os.path.exists(dir_name_dijkstra):
+            os.makedirs(dir_name_dijkstra)
+        filename_dijkstra = dir_name_dijkstra + "/planning_params.yaml"
+
         np_sig = np.array(self.sig)
         np_sig_str = np.array2string(np_sig, separator=', ')
 
-        f = open(filename, "w")
-        f.write("heuristics:\n")
-        f.write("  - type: HomotopicBasedHeuristic\n")
-        f.write("    signatures: " + np_sig_str + "\n")
-        f.write("    visualize: false\n")
-        f.write("\n")
-        f.write("StartX: " + str(float(self.sx)*0.05) + "\n")
-        f.write("StartY: " + str(float(self.sy)*0.05) + "\n")
-        f.write("StartYaw: " + str(float(self.theta)) + "\n")
-        f.write("\n")
-        f.write("goal:\n")
-        f.write("  type: pose\n")
-        f.write("  GoalX: " + str(float(self.gx)*0.05) + "\n")
-        f.write("  GoalY: " + str(float(self.gy)*0.05) + "\n")
-        f.write("  GoalZ: 0.65\n")
-        f.write("  tolerance_xy: 0.3\n")
-        f.write("  tolerance_z: 0.75\n")
-        f.close()
+        f1 = open(filename_hbsp, "w")
+        f1.write("heuristics:\n")
+        f1.write("  - type: HomotopicBasedHeuristic\n")
+        f1.write("    signatures: " + np_sig_str + "\n")
+        f1.write("    visualize: false\n")
+        f1.write("\n")
+        f1.write("StartX: " + str(float(self.sx)*0.05) + "\n")
+        f1.write("StartY: " + str(float(self.sy)*0.05) + "\n")
+        f1.write("StartYaw: " + str(float(self.theta)) + "\n")
+        f1.write("\n")
+        f1.write("goal:\n")
+        f1.write("  type: pose\n")
+        f1.write("  GoalX: " + str(float(self.gx)*0.05) + "\n")
+        f1.write("  GoalY: " + str(float(self.gy)*0.05) + "\n")
+        f1.write("  GoalZ: 0.65\n")
+        f1.write("  tolerance_xy: 0.3\n")
+        f1.write("  tolerance_z: 0.75\n")
+        f1.close()
 
-        self.ax.set_title("Draw a path from the blue circle to the green circle \n Test " + str(test_num + 1))
+        f2 = open(filename_dijkstra, "w")
+        f2.write("heuristics:\n")
+        f2.write("  - type: 2DDijkstraHeuristic\n")
+        f2.write("    visualize: false\n")
+        f2.write("\n")
+        f2.write("StartX: " + str(float(self.sx)*0.05) + "\n")
+        f2.write("StartY: " + str(float(self.sy)*0.05) + "\n")
+        f2.write("StartYaw: " + str(float(self.theta)) + "\n")
+        f2.write("\n")
+        f2.write("goal:\n")
+        f2.write("  type: pose\n")
+        f2.write("  GoalX: " + str(float(self.gx)*0.05) + "\n")
+        f2.write("  GoalY: " + str(float(self.gy)*0.05) + "\n")
+        f2.write("  GoalZ: 0.65\n")
+        f2.write("  tolerance_xy: 0.3\n")
+        f2.write("  tolerance_z: 0.75\n")
+        f2.close()
+
+        self.ax.set_title("Draw a path from the green circle to the red circle \n Test " + str(test_num + 1))
         self.delete_path(event)
         self.regen_random_start_goal_pairs(event)
         self.sig = []
@@ -225,13 +253,6 @@ class DrawPath():
             self.fig.canvas.flush_events()
 
 if __name__ == '__main__':
-    # stream = open(sys.argv[1], "r")
-    # params = yaml.load(stream)
-    # end_x = params['goal']['GoalX'] / 0.05
-    # end_y = params['goal']['GoalY'] / 0.05
-    # start_x = params['StartX'] / 0.05
-    # start_y = params['StartY'] / 0.05
-
     centroids = [(202,168), (56, 142), (48,112), (136, 90), (195, 209), (166, 265),
                  (153, 164), (232, 273), (277, 79), (342, 245), (403, 144)]
     #centroids = [(17, 9), (5,142), (74,0), (117,70), (90,110), (161,12)]
