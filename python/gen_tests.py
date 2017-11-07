@@ -17,7 +17,7 @@ class DrawPath():
         self.map = map
         self.map_values, self.size_x, self.size_y  = self.get_map(self.map)
         self.fig, self.ax = plt.subplots(figsize=(10,10))
-        test_num = len(glob.glob("../../sbpl_mobility/scenarios/house/*")) - 1
+        test_num = (len(glob.glob("../../sbpl_mobility/scenarios/house/*")) - 4)/2 + 1
         self.ax.set_title("Draw a path from the green circle to the red circle \n Test " + str(test_num), fontsize=18)
         self.ax.imshow(self.map_values, vmin=0, vmax=1, cmap='Greys')
         self.sx, self.sy, self.gx, self.gy = self.get_random_start_goal_pairs()
@@ -179,7 +179,7 @@ class DrawPath():
         self.fig.canvas.flush_events()
 
     def write_test_file(self, event):
-        test_num = len(glob.glob("../../sbpl_mobility/scenarios/house/*")) - 1
+        test_num = (len(glob.glob("../../sbpl_mobility/scenarios/house/*")) - 4)/2 + 1
         
         dir_name_hbsp = "../../sbpl_mobility/scenarios/house/hbsp_test_" + str(test_num)
         if not os.path.exists(dir_name_hbsp):
@@ -254,7 +254,7 @@ class DrawPath():
 
 if __name__ == '__main__':
     centroids = [(202,168), (56, 142), (48,112), (136, 90), (195, 209), (166, 265),
-                 (153, 164), (232, 273), (277, 79), (342, 245), (403, 144)]
+                 (153, 164), (232, 273), (277, 79), (330, 281), (363, 191), (384, 245), (403, 144)]
     #centroids = [(17, 9), (5,142), (74,0), (117,70), (90,110), (161,12)]
 
     draw_path = DrawPath(sys.argv[1])
