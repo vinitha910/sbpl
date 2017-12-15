@@ -720,6 +720,12 @@ public:
       }
     };
     
+    typedef std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig> PrevNodes;
+    typedef std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig> GoalSet;
+    typedef std::unordered_set<std::vector<int>, vector_hash> SuffixSet;
+    typedef std::pair<int, std::vector<int> > Vertex;
+    typedef std::pair<Vertex, int> VertexCost;
+
     // virtual void FindObsCells(std::unordered_set<std::pair<int,int>, pair_hash >& obs_cells);
     virtual void CheckNeighbors(int x, 
                 int y,
@@ -736,8 +742,9 @@ public:
                    int obs_num);
 
     // Creates an unordered set of all of the suffixes for the user-defined signature set
-    virtual void Suffixes(std::vector<std::vector<int> > S,
-              std::unordered_set<std::vector<int>, vector_hash>& suffixes);
+    virtual void Suffixes(std::vector<std::vector<int> > S, SuffixSet& suffixes);
+    
+    virtual void Suffixes(std::vector<int> S, SuffixSet* suffixes);
 
     virtual void CreateGoalSet(int end_id, 
                    std::vector<std::vector<int> > S, 
@@ -804,7 +811,7 @@ public:
     std::map<std::pair<int,int>, int, centroid_comparator> centroids_;
     std::map<std::pair<int,int>, int, centroid_comparator>* humanoid_centroids_;
     std::vector<std::vector<int> > S_;    
-    std::unordered_set<std::vector<int>, vector_hash> suffixes_;
+    SuffixSet suffixes_;
 
     std::set<vertex_sig, comparator>* GetQ() { return Q_; };
 
@@ -816,9 +823,6 @@ public:
 
     std::map<std::pair<int,int>, int, centroid_comparator>* GetHumanoidEnvCentroids() { return humanoid_centroids_; };
 
-    typedef std::unordered_map<std::pair<int, std::vector<int> >, std::pair<int, std::vector<int> >, hash_vertex_sig> PrevNodes;
-    typedef std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig> GoalSet;
-    
     virtual int HBSP
       (EnvironmentNAVXYTHETALAT& env,
        PrevNodes& prev_,
@@ -827,7 +831,7 @@ public:
        bool sig_restricted_succ,
        std::map<std::pair<int,int>, int, centroid_comparator>& centroids,
        std::vector<std::vector<int> >& S,
-       std::unordered_set<std::vector<int>, vector_hash>& suffixes,
+       SuffixSet& suffixes,
        int end_id, 
        int start_id,
        VertexCostMap& dist_);
@@ -851,6 +855,12 @@ public:
 
     virtual int GetEuclideanDistToGoal(int& state_id);
     
+    VertexCostMap* GetHBSPDistMap(int idx) { 
+        if (!dist_maps.empty() && idx < dist_maps.size())
+            return dist_maps[idx];
+        return NULL;
+    }
+
 protected:
     //hash table of size x_size*y_size. Maps from coords to stateId
     int HashTableSize;
@@ -875,6 +885,8 @@ protected:
 
     virtual void PrintHashTableHist(FILE* fOut);
 
+    std::vector<VertexCostMap*> dist_maps;
+    std::vector<SuffixSet*> suffix_sets;
 };
   
 #endif

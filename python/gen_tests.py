@@ -18,7 +18,7 @@ class DrawPath():
         self.map_values, self.size_x, self.size_y  = self.get_map(self.map)
         self.fig, self.ax = plt.subplots(figsize=(10,10))
         test_num = (len(glob.glob("../../sbpl_mobility/scenarios/house/*")) - 4)/2 + 1
-        self.ax.set_title("Draw a path from the green circle to the red circle \n Test " + str(test_num), fontsize=18)
+        self.ax.set_title("Draw a path from the green circle to the red circle \n Test 1", fontsize=18)
         self.ax.imshow(self.map_values, vmin=0, vmax=1, cmap='Greys')
         self.sx, self.sy, self.gx, self.gy = self.get_random_start_goal_pairs()
         self.theta = 0
@@ -61,7 +61,7 @@ class DrawPath():
 
         self.sig = []
 
-        self.fig_plot, = self.ax.plot(self.path_x, self.path_y, "-", linewidth = 3, color="red")
+        self.fig_plot, = self.ax.plot(self.path_x, self.path_y, "-", linewidth = 3, color="blue")
 
         self.ax.axis('off')
         plt.show()

@@ -26,8 +26,8 @@ class DrawPath():
         self.end_y = end_y
         self.centroids = centroids
 
-        self.start_circle = plt.Circle((end_x,end_y), 5, color='blue')
-        self.goal_circle = plt.Circle((start_x,start_y), 5, color='green')
+        self.start_circle = plt.Circle((end_x,end_y), 5, color='green')
+        self.goal_circle = plt.Circle((start_x,start_y), 5, color='red')
         self.ax.add_artist(self.start_circle)
         self.ax.add_artist(self.goal_circle)
 
@@ -49,7 +49,7 @@ class DrawPath():
         self.path_x = []
         self.path_y = []
 
-        self.fig_plot, = self.ax.plot(self.path_x, self.path_y, "-", linewidth = 3, color="red")
+        self.fig_plot, = self.ax.plot(self.path_x, self.path_y, "-", linewidth = 3, color="blue")
 
         self.ax.axis('off')
         plt.show()
@@ -136,10 +136,16 @@ if __name__ == '__main__':
     start_x = params['StartX'] / 0.05
     start_y = params['StartY'] / 0.05
 
-    centroids = [(202,168), (56, 142), (48,112), (136, 90), (195, 209), (166, 265),
-                 (153, 164), (232, 273), (277, 79), (330, 281), (363, 191), (384, 245), (403, 144)]
-    #centroids = [(17, 9), (5,142), (74,0), (117,70), (90,110), (161,12)]
+    # LIVING ROOM
+    #centroids = [(54, 8), (193, 45), (106, 8), (151, 71), (123, 110), (195, 45)]
 
+    # HARD SCENCES
+    centroids = [(201,173), (57, 147), (49, 111), (135, 95), (194, 214), (153, 270),
+                 (164, 169), (232, 277), (276, 84), (329, 286), (362, 196), (382, 250), (403, 149)]
+    
+    # SMALL OBSTACLE SCENES
+    
+    
     draw_path = DrawPath(sys.argv[2], start_x, start_y, end_x, end_y, centroids)
 
       

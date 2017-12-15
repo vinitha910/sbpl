@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 import os
 
 def run_tests(num_tests):
@@ -10,10 +9,13 @@ def run_tests(num_tests):
 		scenario_name = "house/hbsp_test_" + str(test_num)
 		name = "mobility_planner_hbsp_" + str(test_num)
 		stats_filepath = SBPL_MOBILITY_PKG_PATH + "/scenarios/house/hbsp_stats.yaml"
-		cmd = "roslaunch sbpl_mobility mobility_planner.launch scenario:=" + scenario_name + " name:=" + name + " stats_filepath:=" + stats_filepath
-		print cmd
+		
+		dir_name = SBPL_MOBILITY_PKG_PATH + "/scenarios/" + scenario_name
+		if os.path.exists(dir_name):
+			cmd = "roslaunch sbpl_mobility mobility_planner.launch scenario:=" + scenario_name + " name:=" + name + " stats_filepath:=" + stats_filepath + " test_num:=" + str(test_num)
+			print cmd
+			os.system(cmd)
 		test_num += 1
-		#os.system(cmd)
 
 	test_num = 1
 	while test_num <= num_tests:
@@ -21,9 +23,12 @@ def run_tests(num_tests):
 		scenario_name = "house/dijkstra_test_" + str(test_num)
 		name = "mobility_planner_dijkstra_" + str(test_num)
 		stats_filepath = SBPL_MOBILITY_PKG_PATH + "/scenarios/house/dijkstra_stats.yaml"
-		cmd = "roslaunch sbpl_mobility mobility_planner.launch scenario:=" + scenario_name + " name:=" + name + " stats_filepath:=" + stats_filepath
-		print cmd
+		
+		dir_name = SBPL_MOBILITY_PKG_PATH + "/scenarios/" + scenario_name
+		if os.path.exists(dir_name):
+			cmd = "roslaunch sbpl_mobility mobility_planner.launch scenario:=" + scenario_name + " name:=" + name + " stats_filepath:=" + stats_filepath + " test_num:=" + str(test_num)
+			print cmd
+			os.system(cmd)
 		test_num += 1
-		#os.system(cmd)
 
-run_tests(61)
+run_tests(2)

@@ -40,6 +40,7 @@
 #include <functional>
 #include <algorithm>
 #include <limits>
+#include <math.h>
 
 #if TIME_DEBUG
 static clock_t time3_addallout = 0;
@@ -2445,6 +2446,7 @@ EnvironmentNAVXYTHETALAT::~EnvironmentNAVXYTHETALAT()
         delete[] Coord2StateIDHashTable_lookup;
         Coord2StateIDHashTable_lookup = NULL;
     }
+
 }
 
 void EnvironmentNAVXYTHETALAT::GetCoordFromState(
@@ -3594,8 +3596,7 @@ void EnvironmentNAVXYTHETALAT::FindCentroids(std::unordered_map<std::pair<int,in
   }
 }
 
-void EnvironmentNAVXYTHETALAT::Suffixes(std::vector<std::vector<int> > S,
-                    std::unordered_set<std::vector<int>, vector_hash>& suffixes) {
+void EnvironmentNAVXYTHETALAT::Suffixes(std::vector<std::vector<int> > S, SuffixSet& suffixes) {
   for(int i = 0; i < S.size(); ++i) {
     std::vector<int> sig = S[i];
     for(int j = 1; j <= sig.size(); ++j) {
@@ -3605,9 +3606,16 @@ void EnvironmentNAVXYTHETALAT::Suffixes(std::vector<std::vector<int> > S,
   }
 }
 
+void EnvironmentNAVXYTHETALAT::Suffixes(std::vector<int> S, SuffixSet* suffixes) {
+    for(int j = 1; j <= S.size(); ++j) {
+        std::vector<int> suf (S.begin(), S.begin() + j);
+        suffixes->insert(suf);
+    }
+}
+
 void EnvironmentNAVXYTHETALAT::CreateGoalSet(int end_id, 
                          std::vector<std::vector<int> > S, 
-                         std::unordered_set<std::pair<int, std::vector<int> >, hash_vertex_sig>& goals) {
+                         GoalSet& goals) {
   for(int i = 0; i < S.size(); ++i) {
     goals.insert(std::make_pair(end_id, S[i]));
   }
@@ -3749,94 +3757,101 @@ int EnvironmentNAVXYTHETALAT::HBSP(
        int start_id,
        VertexCostMap& dist_) {
 
-  if(Q.empty()) {
-    if(sig_restricted_succ) {
-      EnvironmentNAVXYTHETALAT::centroids_ = centroids;
-      EnvironmentNAVXYTHETALAT::S_ = S;
-      EnvironmentNAVXYTHETALAT::suffixes_ = suffixes;
-    }
-    std::vector<int> sig;
-    std::pair<int, std::vector<int> > init_v(start_id, sig);
-    dist_.insert(std::make_pair(init_v, 0));
-    Q.insert(init_v);
-  } 
+    if(Q.empty()) {
+        if(sig_restricted_succ) {
+            EnvironmentNAVXYTHETALAT::centroids_ = centroids;
+            EnvironmentNAVXYTHETALAT::S_ = S;
+            EnvironmentNAVXYTHETALAT::suffixes_ = suffixes;
+        }
+        std::pair<int, std::vector<int> > init_v(start_id, std::vector<int>());
+        dist_.insert(std::make_pair(init_v, 0));
+        Q.insert(init_v);
+    } 
 
-  int x, y, th;
-  GetCoordFromState(end_id, x, y, th);
-  if(EnvNAVXYTHETALATCfg.dt[x][y] * EnvNAVXYTHETALATCfg.cellsize_m <= EnvNAVXYTHETALATCfg.cellsize_m * 3) {
-    for(auto &s: S) {
-        std::pair<int, std::vector<int> > v(end_id, s);
-        dist_.insert(std::make_pair(v, std::numeric_limits<int>::max()));
+    CreateGoalSet(end_id, S, goals);
+
+    std::vector<int> succ_ids;
+    std::vector<int> costs;
+    std::vector<int> succ_sig;
+    std::pair<int, std::vector<int> > u;
+    std::vector<int> curr_vertex_dists; 
+
+    while(!Q.empty()) {
+        u = *(Q.begin());
+        Q.erase(Q.begin());
+        succ_ids.clear();
+        costs.clear();
+        succ_sig.clear();
+        env.GetSuccs(u.first, &succ_ids, &costs);
+        assert(succ_ids.size() == costs.size());
+
+        int dist_u = dist_.at(u);
+
+        if (!sig_restricted_succ && dist_u > hbsp_max_dist_) {
+            return hbsp_max_dist_;
+        }
+
+        for (int sidx = 0; sidx < succ_ids.size(); ++sidx) {
+            succ_sig.clear();
+            Signature(u, succ_ids[sidx], env, centroids, succ_sig);
+      
+            // If the current siguature not in set of suffixes
+            if(sig_restricted_succ && !succ_sig.empty() && suffixes.count(succ_sig) == 0) { 
+                succ_sig.clear();
+                continue;
+            } 
+
+            // If HBSP is run on demand, do not allow signature to 
+            // loop around obstacles more than once
+            else if (!sig_restricted_succ && !succ_sig.empty()) {
+                std::vector<int> tmp (succ_sig);
+                for(int i = 0; i < tmp.size(); ++i) {
+                    if(tmp.at(i) < 0) tmp[i] *= -1;
+                }
+                std::sort(tmp.begin(), tmp.end()); 
+                auto it = std::adjacent_find (tmp.begin(), tmp.end());
+                if (it!= tmp.end()) {
+                    succ_sig.clear();
+                    continue;
+                }
+            }
+
+            // Find current distance
+            int alt = dist_u + costs[sidx];
+            Vertex curr_vertex(succ_ids[sidx], succ_sig);
+
+            // Check if current vertex was explored, i.e. if dist is specified
+            auto dist_curr = dist_.find(curr_vertex);
+            if(dist_curr == dist_.end() || alt < dist_curr->second) {
+                VertexCost curr_vertex_cost = std::make_pair(curr_vertex, alt);
+                dist_.insert(curr_vertex_cost);
+
+                // Store max cost for visualizations
+                if(sig_restricted_succ && alt > hbsp_max_dist_) {
+                    hbsp_max_dist_ = alt;
+                } 
+
+                auto it = Q.find(curr_vertex);
+                if(it != Q.end()) {
+                    Q.erase(it);
+                }
+                Q.insert(curr_vertex);
+        
+                if(goals.count(curr_vertex) > 0) {
+                    goals.erase(curr_vertex);
+                    if(goals.empty()) {
+                        Q_ = &Q;
+                        return dist_.at(curr_vertex);
+                    }
+                }
+            }
+        }
+    }
+    // Set all unreachable goals to dist of infinity
+    for(auto &g: goals) {
+        dist_.insert(std::make_pair(g, std::numeric_limits<int>::max()));
     }
     return std::numeric_limits<int>::max();
-  }
-
-  CreateGoalSet(end_id, S, goals);
-
-  std::vector<int> succ_ids;
-  std::vector<int> costs;
-  std::vector<int> succ_sig;
-  std::pair<int, std::vector<int> > u;
-
-  while(!Q.empty()) {
-    u = *(Q.begin());
-    Q.erase(Q.begin());
-    succ_ids.clear();
-    costs.clear();
-    succ_sig.clear();
-    env.GetSuccs(u.first, &succ_ids, &costs);
-    assert(succ_ids.size() == costs.size());
-    int dist_u = dist_.at(u);
-    for (int sidx = 0; sidx < succ_ids.size(); ++sidx) {
-      succ_sig.clear();
-      Signature(u, succ_ids[sidx], env, centroids, succ_sig);
-      // If the current siguature not in set of suffixes
-      if(sig_restricted_succ && !succ_sig.empty() &&
-         suffixes.count(succ_sig) == 0) { 
-        succ_sig.clear();
-        continue;
-      } else if (!sig_restricted_succ && !succ_sig.empty()) {
-        std::vector<int> tmp (succ_sig);
-        for(int i = 0; i < tmp.size(); ++i) {
-          if(tmp.at(i) < 0) tmp[i] *= -1;
-        }
-        std::sort(tmp.begin(), tmp.end()); 
-        auto it = std::adjacent_find (tmp.begin(), tmp.end());
-        if (it!= tmp.end()) {
-          succ_sig.clear();
-          continue;
-        }
-      }
-      int alt = dist_u + costs[sidx];
-      std::pair<int, std::vector<int> > curr_vertex(succ_ids[sidx], succ_sig);
-
-      // Check if current vertex was explored, i.e. if dist is specified
-      auto dist_curr = dist_.find(curr_vertex);
-      if(dist_curr == dist_.end() || alt < dist_curr->second) {
-        dist_.insert(std::make_pair(curr_vertex, alt));
-        if(alt > hbsp_max_dist_) {
-            hbsp_max_dist_ = alt;
-        }
-
-        auto it = Q.find(curr_vertex);
-        if(it != Q.end()) {
-          Q.erase(it);
-        }
-        Q.insert(curr_vertex);
-        
-        if(goals.count(curr_vertex) > 0) {
-          goals.erase(curr_vertex);
-          if(goals.empty()) {
-            Q_ = &Q;
-            //std::cout << "Q size AFTER: " << Q.size() << std::endl;
-            return dist_.at(curr_vertex);
-          }
-        }
-      }
-    }
-  }
-
-  return std::numeric_limits<int>::max();
 }
 
 bool EnvironmentNAVXYTHETALAT::IsObstacle(int x, int y) {
@@ -3877,17 +3892,36 @@ int EnvironmentNAVXYTHETALAT::GetHBSPCost(int hidx,
   int x, y, th;
   GetCoordFromState(v.first, x, y, th);
 
-  // if(v.first == EnvNAVXYTHETALAT.startstateid) {
-  //   return HBSP_dist_.at(std::make_pair(EnvNAVXYTHETALAT.goalstateid, desired_sig));
-  // } else 
-  if(v.first == EnvNAVXYTHETALAT.goalstateid) {
+  // Robot's goal configuration was set as env's start id
+  if(v.first == EnvNAVXYTHETALAT.startstateid) {
     return 0;
   }
 
   if(IsObstacle(x,y)) {
     return std::numeric_limits<int>::max();
   }
-  
+
+  int xd = EnvNAVXYTHETALATCfg.StartX_c - x;
+  int yd = EnvNAVXYTHETALATCfg.StartY_c - y;
+  double sqdist = (double)((xd*xd) + (yd*yd));
+  double dist_to_goal = sqrt(sqdist);
+  if (dist_to_goal <= 6.0) { // goaltol (0.3) / cellsize (0.05) 
+    return 0;
+  }
+
+  if (!Q_->empty()) {
+      std::pair<int, std::vector<int> > u = *(Q_->begin());
+      int dist_u = HBSP_dist_.at(u);
+      if (dist_u > hbsp_max_dist_) {
+        return hbsp_max_dist_;
+      }
+  }
+
+  // if (x == EnvNAVXYTHETALATCfg.EndX_c && y == EnvNAVXYTHETALATCfg.EndY_c) {
+  //   HBSP_dist_.at(std::make_pair(EnvNAVXYTHETALAT.goalstateid, desired_sig));  
+  // }
+
+  // Remove beams from desired sig that have already been crossed over  
   bool overlap = true;
   while(overlap && !v.second.empty() && !desired_sig.empty()) {
     if(desired_sig.back() == v.second.front() ||
@@ -3899,15 +3933,22 @@ int EnvironmentNAVXYTHETALAT::GetHBSPCost(int hidx,
     }
   }
 
-  if(desired_sig.empty() && !v.second.empty()) {
-    std::transform (v.second.begin(), v.second.end(), v.second.begin(), std::negate<int>());
-    desired_sig.insert(desired_sig.end(), v.second.rbegin(), v.second.rend());;
-  }else {
-    desired_sig.insert(desired_sig.end(), v.second.begin(), v.second.end());
+  // if(desired_sig.empty() && !v.second.empty()) {
+  //   // Negate all beams in signature
+  //   std::transform (v.second.begin(), v.second.end(), v.second.begin(), std::negate<int>());
+  //   // Insert all beams reversed
+  //   desired_sig.insert(desired_sig.end(), v.second.rbegin(), v.second.rend());
+  // } else {
+  //   // 
+  //   desired_sig.insert(desired_sig.end(), v.second.begin(), v.second.end());
+  // }
+
+  if(!v.second.empty()) {
+    desired_sig.insert(desired_sig.end(), v.second.rbegin(), v.second.rend());
   }
   std::pair<int, std::vector<int> > v_inverse = std::make_pair(v.first, desired_sig);
 
-  if(HBSP_dist_.count(v_inverse) > 0){
+  if (HBSP_dist_.count(v_inverse) > 0) {
     return HBSP_dist_.at(v_inverse);
   } else if(Q_->empty()) {
     return std::numeric_limits<int>::max();
@@ -3916,23 +3957,52 @@ int EnvironmentNAVXYTHETALAT::GetHBSPCost(int hidx,
   PrevNodes prev;
   GoalSet goals;
 
-  // std::cout << "return HBSP: (" << x << ", " << y << ", {";
-  // for(auto& s:desired_sig){
-  //   std::cout << s << ", ";
-  // }
-  // std::cout << "})" << std::endl;
+  std::cout << "(" << EnvNAVXYTHETALATCfg.EndX_c << ", " << EnvNAVXYTHETALATCfg.EndY_c << ")" << std::endl;
+  std::cout << "return HBSP: (" << x << ", " << y << ", {";
+  for(auto& s:desired_sig){
+    std::cout << s << ", ";
+  }
+  std::cout << "})" << std::endl;
 
   int dist = HBSP(env, prev, goals, *Q_, false, centroids_, S_, suffixes_, v.first, 
-    EnvNAVXYTHETALAT.startstateid, EnvironmentNAVXYTHETALAT::HBSP_dist_);
+    EnvNAVXYTHETALAT.startstateid, HBSP_dist_);
 
   // FILE* f = fopen("/home/vinitha910/Documents/hbsp_on_demand_vals.txt", "a");
   // fprintf(f, "%d %d %d\n", x, y, dist);
   // fclose(f);
-
+  std::cout << "DIST: " << dist << std::endl;
   return dist;
 }
 
 int EnvironmentNAVXYTHETALAT::GetDijkstraCost(int state_id){
+  int x, y, th;
+  GetCoordFromState(state_id, x, y, th);
+
+  // Robot's goal configuration was set as env's start id
+  if(state_id == EnvNAVXYTHETALAT.startstateid) {
+    return 0;
+  }
+
+  if(IsObstacle(x,y)) {
+    return std::numeric_limits<int>::max();
+  }
+
+  if (x == EnvNAVXYTHETALATCfg.EndX_c && y == EnvNAVXYTHETALATCfg.EndY_c) {
+    dijkstra_dist_.at(EnvNAVXYTHETALAT.goalstateid);  
+  }
+
+  int xd = EnvNAVXYTHETALATCfg.StartX_c - x;
+  int yd = EnvNAVXYTHETALATCfg.StartY_c - y;
+  double sqdist = (double)((xd*xd) + (yd*yd));
+  double dist_to_goal = sqrt(sqdist);
+  if (dist_to_goal <= 6.0) { // goaltol (0.3) / cellsize (0.05) 
+    return 0;
+  }
+
+  // if (x == EnvNAVXYTHETALATCfg.EndX_c && y == EnvNAVXYTHETALATCfg.EndY_c) {
+  //   dijkstra_dist_.at(EnvNAVXYTHETALAT.goalstateid);  
+  // }
+
   if(dijkstra_dist_.count(state_id) > 0)
     return dijkstra_dist_.at(state_id);
   
